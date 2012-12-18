@@ -4,22 +4,35 @@ import "testing"
 import "strconv"
 import "go-cache"
 import "go-cache/arc"
-
-func clean(obj cache.CacheObject) error {
-	println("clear:", obj.(string))
-	return nil
-}
-
-func fetch(key string) (cache.CacheObject, error) {
-	return key, nil
-}
+import "math/rand"
 
 func TestGet(t *testing.T) {
-	arc := arc.NewArcCache(10)
-	arc.SetCleanFunc(clean)
-	arc.SetFetchFunc(fetch)
+	cacheSize := 100
+	countCleaned := 0
+	countAdded := 0
 
-	for i := 0; i < 20; i ++ {
+	arc := arc.NewArcCache(cacheSize)
+
+	arc.SetCleanFunc(func (obj cache.CacheObject) error {
+		countCleaned += 1
+		return nil
+	})
+	arc.SetFetchFunc(func (key string) (cache.CacheObject, error) {
+		countAdded += 1
+		return key, nil
+	})
+
+	for i := 0; i < 2000; i ++ {
 		arc.Get("key"+strconv.Itoa(i))
 	}
+
+	for i := 0; i < 200; i ++ {
+		j := rand.Intn(20)
+		arc.Get("key"+strconv.Itoa(j))
+	}
+
+	if countCleaned + cacheSize != countAdded {
+		t.Errorf("numbers of data items dont match")
+	}
+	arc.Checkkeys()
 }
