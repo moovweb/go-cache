@@ -1,4 +1,4 @@
-package arc
+package cache
 
 type CacheObject interface {
 	Free()

@@ -1,5 +1,7 @@
 package arc
 
+import . "go-cache"
+
 type ARCache struct {
 	//max number of cache entries
 	size int
