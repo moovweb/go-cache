@@ -76,7 +76,7 @@ func (arc *ARCache) Set(key string, object CacheObject) {
 }
 
 //get a CDB by a key
-//in case of CacheMiss, the object stores in the cache entry
+//in case of CacheMiss, the object stores in the cache entry is no longer valid
 func (arc *ARCache) get(key string) (*cacheDirectoryBlock, error) {
 	tmp := arc.cdbHash[key]
 	var err error
