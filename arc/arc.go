@@ -61,24 +61,22 @@ func (arc *ARCache) replace() *cacheEntry {
 
 func (arc *ARCache) Get(key string) (object CacheObject, err error) {
 	tmp, err := arc.get(key)
-	if tmp.pointer == nil {
-		panic("cannot be nil")
-	}
 	if err == CacheMiss {
 		object, err = arc.fetchFunc(key)
 		arc.setObject(tmp.pointer, object)
+	} else {
+		object = tmp.pointer.object
 	}
 	return
 }
 
 func (arc *ARCache) Set(key string, object CacheObject) {
 	tmp, _ := arc.get(key)
-	if tmp.pointer == nil {
-		panic("cannot be nil")
-	}
 	arc.setObject(tmp.pointer, object)
 }
 
+//get a CDB by a key
+//in case of CacheMiss, the object stores in the cache entry
 func (arc *ARCache) get(key string) (*cacheDirectoryBlock, error) {
 	tmp := arc.cdbHash[key]
 	var err error
@@ -132,6 +130,9 @@ func (arc *ARCache) get(key string) (*cacheDirectoryBlock, error) {
 		arc.cdbHash[key] = tmp
 		err = CacheMiss
 	}
+	if tmp.pointer == nil {
+		panic("cannot be nil")
+	}
 	return tmp, err
 }
 
@@ -141,6 +142,16 @@ func (arc *ARCache) SetFetchFunc(f CacheFetchFunc) {
 
 func (arc *ARCache) SetCleanFunc(f CacheCleanFunc) {
 	arc.cleanFunc = f
+}
+
+func (arc *ARCache) GetAllObjects() map[string]CacheObject {
+	all := make(map[string]CacheObject)
+	for key, cdb := range(arc.cdbHash) {
+		if cdb.where == in_t1 || cdb.where == in_t2 {
+			all[key] = cdb.pointer.object
+		}
+	}
+	return all
 }
 
 func (arc *ARCache) clearObject(entry *cacheEntry) {
@@ -163,13 +174,16 @@ func (arc *ARCache) fetch(key string) (CacheObject, error) {
 	return arc.fetchFunc(key)
 }
 
-func (arc *ARCache) Checkkeys() {
+func (arc *ARCache) CheckCache() {
 	for key, cdb := range(arc.cdbHash) {
 		if cdb.key != key {
 			panic("keys don't match")
 		}
 		if (cdb.where == in_b1 || cdb.where == in_b2) && cdb.pointer != nil {
 			panic("cdb pointer should be nil")
+		}
+		if (cdb.where == in_t1 || cdb.where == in_t2) && cdb.pointer == nil {
+			panic("cdb pointer should not be nil")
 		}
 	}
 }

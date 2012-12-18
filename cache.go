@@ -10,6 +10,7 @@ type CacheCleanFunc func(CacheObject) error
 type Cache interface {
 	Set(string, CacheObject)
 	Get(string) (CacheObject, error)
+	GetAllObjects() map[string]CacheObject
 	SetFetchFunc(CacheFetchFunc)
 	SetCleanFunc(CacheCleanFunc)
 }
