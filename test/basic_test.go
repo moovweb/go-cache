@@ -28,11 +28,24 @@ func TestGet(t *testing.T) {
 
 	for i := 0; i < 200; i ++ {
 		j := rand.Intn(20)
-		arc.Get("key"+strconv.Itoa(j))
+		val, err := arc.Get("key"+strconv.Itoa(j))
+		if err != nil {
+			t.Errorf("err: %s", err.Error())
+		}
+		if val == nil || val.(string) != "key"+strconv.Itoa(j) {
+			t.Errorf("key does not match the value")
+		}
 	}
+
+	arc.CheckCache()
 
 	if countCleaned + cacheSize != countAdded {
 		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, cacheSize)
 	}
-	arc.Checkkeys()
+	
+	for key, obj := range(arc.GetAllObjects()) {
+		if key != obj.(string) {
+			t.Errorf("key does not match the cached value")
+		}
+	}
 }
