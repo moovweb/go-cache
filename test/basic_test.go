@@ -32,7 +32,7 @@ func TestGet(t *testing.T) {
 	}
 
 	if countCleaned + cacheSize != countAdded {
-		t.Errorf("numbers of data items dont match")
+		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, cacheSize)
 	}
 	arc.Checkkeys()
 }

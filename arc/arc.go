@@ -60,43 +60,51 @@ func (arc *ARCache) replace() *cacheEntry {
 }
 
 func (arc *ARCache) Get(key string) (object CacheObject, err error) {
+	tmp, err := arc.get(key)
+	if tmp.pointer == nil {
+		panic("cannot be nil")
+	}
+	if err == CacheMiss {
+		object, err = arc.fetchFunc(key)
+		arc.setObject(tmp.pointer, object)
+	}
+	return
+}
+
+func (arc *ARCache) Set(key string, object CacheObject) {
+	tmp, _ := arc.get(key)
+	if tmp.pointer == nil {
+		panic("cannot be nil")
+	}
+	arc.setObject(tmp.pointer, object)
+}
+
+func (arc *ARCache) get(key string) (*cacheDirectoryBlock, error) {
 	tmp := arc.cdbHash[key]
+	var err error
 	if tmp != nil {
-		switch tmp.where {
-			case in_t1:
+		if tmp.where == in_t1 || tmp.where == in_t2 {
+			if tmp.where == in_t1 {
 				arc.t1.RemoveIt(tmp)
 				arc.t2.InsertMRU(tmp)
 				tmp.where = in_t2
-			case in_t2:
+			} else {
 				arc.t2.SetMRU(tmp)
-			case in_b1:
-				object, err = arc.fetch(key)
-				if err != nil {
-					return
-				}
+			}
+		} else { //in b1 or b2
+			if tmp.where == in_b1 {
 				arc.target_t1 = min(arc.target_t1 + max(arc.b2.Len()/arc.b1.Len(), 1), arc.size)
 				arc.b1.RemoveIt(tmp)
-				tmp.pointer = arc.replace()
-				arc.setObject(tmp.pointer, object)
-				tmp.where = in_t2
-				arc.t2.InsertMRU(tmp)
-			case in_b2:
-				object, err = arc.fetch(key)
-				if err != nil {
-					return
-				}
+			} else {
 				arc.target_t1 = min(arc.target_t1 - max(arc.b1.Len()/arc.b2.Len(), 1), 0)
 				arc.b2.RemoveIt(tmp)
-				tmp.pointer = arc.replace()
-				arc.setObject(tmp.pointer, object)
-				tmp.where = in_t2
-				arc.t2.InsertMRU(tmp)
+			}
+			tmp.pointer = arc.replace()
+			tmp.where = in_t2
+			arc.t2.InsertMRU(tmp)
+			err = CacheMiss
 		}
 	} else {
-		object, err = arc.fetchFunc(key)
-		if err != nil {
-			return
-		}
 		if arc.t1.Len() + arc.b1.Len() == arc.size {
 			if arc.t1.Len() < arc.size {
 				tmp = arc.b1.RemoveLRU()
@@ -121,10 +129,10 @@ func (arc *ARCache) Get(key string) (object CacheObject, err error) {
 		tmp.key = key
 		tmp.where = in_t1
 		arc.t1.InsertMRU(tmp)
-		arc.setObject(tmp.pointer, object)
 		arc.cdbHash[key] = tmp
+		err = CacheMiss
 	}
-	return
+	return tmp, err
 }
 
 func (arc *ARCache) SetFetchFunc(f CacheFetchFunc) {
