@@ -8,7 +8,7 @@ type ARCache struct {
 
 	//cache entries
 	//each entry stores one cache object
-	entries []*cacheEntry
+	//entries []*cacheEntry
 
 	//the hook which is called in case of cache miss
 	fetchFunc CacheFetchFunc
@@ -29,13 +29,23 @@ type ARCache struct {
 	target_t1 int
 }
 
+func NewArcCache(size int) *ARCache {
+	arc := &ARCache{}
+	arc.size = size
+	arc.t1 = newCdbList()
+	arc.b1 = newCdbList()
+	arc.t2 = newCdbList()
+	arc.b2 = newCdbList()
+	return arc
+}
+
 func (arc *ARCache) replace() *cacheEntry {
 	var cdb *cacheDirectoryBlock
 	if arc.t1.Len() >= max(1, arc.target_t1) {
 		cdb = arc.t1.RemoveLRU()
 		arc.b1.InsertMRU(cdb)
 	} else {
-		cdb = arc.t1.RemoveLRU()
+		cdb = arc.t2.RemoveLRU()
 		arc.b2.InsertMRU(cdb)
 	}
 	if cdb == nil || cdb.pointer == nil {
@@ -55,25 +65,25 @@ func (arc *ARCache) Get(key string) (object CacheObject, err error) {
 			case in_t2:
 				arc.t2.SetMRU(tmp)
 			case in_b1:
-				object, err = arc.fetchFunc(key)
+				object, err = arc.fetch(key)
 				if err != nil {
 					return
 				}
 				arc.target_t1 = min(arc.target_t1 + max(arc.b2.Len()/arc.b1.Len(), 1), arc.size)
 				arc.b1.RemoveIt(tmp)
 				tmp.pointer = arc.replace()
-				tmp.pointer.object = object
+				arc.setObject(tmp.pointer, object)
 				tmp.where = in_t2
 				arc.t2.InsertMRU(tmp)
 			case in_b2:
-				object, err = arc.fetchFunc(key)
+				object, err = arc.fetch(key)
 				if err != nil {
 					return
 				}
 				arc.target_t1 = min(arc.target_t1 - max(arc.b1.Len()/arc.b2.Len(), 1), 0)
 				arc.b2.RemoveIt(tmp)
 				tmp.pointer = arc.replace()
-				tmp.pointer.object = object
+				arc.setObject(tmp.pointer, object)
 				tmp.where = in_t2
 				arc.t2.InsertMRU(tmp)
 		}
@@ -90,72 +100,21 @@ func (arc *ARCache) Get(key string) (object CacheObject, err error) {
 				tmp = arc.t1.RemoveLRU()
 			}
 		} else if arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len() >= arc.size {
-			if arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len() >= arc.size * 2 {
+			if arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len() == arc.size * 2 {
 				tmp = arc.b2.RemoveLRU()
 			} else {
 				tmp = newCacheDirectorBlock()
 				tmp.pointer = newCacheEntry()
 			}
 		} else {
-			tmp := newCacheDirectorBlock()
+			tmp = newCacheDirectorBlock()
 			tmp.pointer = newCacheEntry()
 		}
-		tmp.pointer.object = object
 		tmp.where = in_t1
 		arc.t1.InsertMRU(tmp)
+		arc.setObject(tmp.pointer, object)
 	}
 	return
-}
-
-func (arc *ARCache) Set(key string, object CacheObject) {
-	tmp := arc.cdbHash[key]
-	if tmp != nil {
-		switch tmp.where {
-			case in_t1:
-				arc.t1.RemoveIt(tmp)
-				arc.t2.InsertMRU(tmp)
-				tmp.where = in_t2
-			case in_t2:
-				arc.t2.SetMRU(tmp)
-			case in_b1:
-				arc.target_t1 = min(arc.target_t1 + max(arc.b2.Len()/arc.b1.Len(), 1), arc.size)
-				arc.b1.RemoveIt(tmp)
-				tmp.pointer = arc.replace()
-				tmp.pointer.object = object
-				tmp.where = in_t2
-				arc.t2.InsertMRU(tmp)
-			case in_b2:
-				arc.target_t1 = min(arc.target_t1 - max(arc.b1.Len()/arc.b2.Len(), 1), 0)
-				arc.b2.RemoveIt(tmp)
-				tmp.pointer = arc.replace()
-				tmp.pointer.object = object
-				tmp.where = in_t2
-				arc.t2.InsertMRU(tmp)
-		}
-		tmp.pointer.object = object
-	} else {
-		if arc.t1.Len() + arc.b1.Len() == arc.size {
-			if arc.t1.Len() < arc.size {
-				tmp = arc.b1.RemoveLRU()
-				tmp.pointer = arc.replace()
-			} else {
-				tmp = arc.t1.RemoveLRU()
-			}
-		} else if arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len() >= arc.size {
-			if arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len() >= arc.size * 2 {
-				tmp = arc.b2.RemoveLRU()
-			} else {
-				tmp = newCacheDirectorBlock()
-				tmp.pointer = newCacheEntry()
-			}
-		} else {
-			tmp := newCacheDirectorBlock()
-			tmp.pointer = newCacheEntry()
-		}
-		tmp.pointer.object = object
-		tmp.where = in_t1
-		arc.t1.InsertMRU(tmp)
-	}
 }
 
 func (arc *ARCache) SetFetchFunc(f CacheFetchFunc) {
@@ -164,4 +123,24 @@ func (arc *ARCache) SetFetchFunc(f CacheFetchFunc) {
 
 func (arc *ARCache) SetCleanFunc(f CacheCleanFunc) {
 	arc.cleanFunc = f
+}
+
+func (arc *ARCache) clearObject(entry *cacheEntry) {
+	arc.setObject(entry, nil)
+}
+
+func (arc *ARCache) setObject(entry *cacheEntry, obj interface{}) {
+	if entry != nil {
+		if entry.object != nil && arc.cleanFunc != nil {
+			arc.cleanFunc(entry.object)
+		}
+		entry.object = obj
+	}
+}
+
+func (arc *ARCache) fetch(key string) (CacheObject, error) {
+	if arc.fetchFunc == nil {
+		return nil, CacheMiss
+	}
+	return arc.fetchFunc(key)
 }
