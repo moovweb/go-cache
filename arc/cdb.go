@@ -21,6 +21,7 @@ type cacheDirectoryBlock struct {
 	element *list.Element
 	pointer *cacheEntry
 	where int
+	key string
 }
 
 func newCacheDirectorBlock() *cacheDirectoryBlock {

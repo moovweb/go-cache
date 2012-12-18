@@ -10,6 +10,5 @@ var count = 0
 
 func newCacheEntry() *cacheEntry {
 	count += 1
-	println("count:", count)
 	return &cacheEntry{}
 }
