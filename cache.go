@@ -1,13 +1,14 @@
 package cache
 
-type CacheObject interface {
-	Free()
-}
+type CacheObject interface {}
+
+type CacheFetchFunc func(string) (CacheObject, error)
+type CacheCleanFunc func(CacheObject) error
 
 type Cache interface {
 	Set(string, CacheObject)
 	Get(string) (CacheObject, error)
-	Delete(string) error
+	SetFetchFunc(CacheFetchFunc)
+	SetCleanFunc(CacheCleanFunc)
 }
 
-type CacheFetchFunc func(string) (CacheObject, error)

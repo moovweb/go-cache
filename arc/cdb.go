@@ -3,6 +3,7 @@ package arc
 import (
 	"container/list"
 	"sync"
+	. "go-cache"
 )
 
 const (
@@ -15,6 +16,7 @@ const (
 type CDBList struct {
 	cdbs *list.List
 	mutex sync.Mutex
+	cleanFunc CacheCleanFunc
 }
 
 type cacheDirectoryBlock struct {
@@ -34,10 +36,7 @@ func (cdbl *CDBList) RemoveLRU() *cacheDirectoryBlock {
 		return nil
 	}
 	cdb := cdbl.cdbs.Remove(lru).(*cacheDirectoryBlock)
-	if cdb != nil && cdb.pointer != nil && cdb.pointer.object != nil {
-		cdb.pointer.object.Free()
-		cdb.pointer.object = nil
-	}
+	cdbl.Clean(cdb)
 	return cdb
 }
 
@@ -50,9 +49,17 @@ func (cdbl *CDBList) SetMRU(cdb *cacheDirectoryBlock) {
 }
 
 func (cdbl *CDBList) RemoveIt(cdb *cacheDirectoryBlock) {
-	cdbl.cdbs.Remove(cdb.element)
+	cdb = cdbl.cdbs.Remove(cdb.element).(*cacheDirectoryBlock)
+	cdbl.Clean(cdb)
 }
 
 func (cdbl *CDBList) Len() int {
 	return cdbl.cdbs.Len()
+}
+
+func (cdbl *CDBList) Clean(cdb *cacheDirectoryBlock) {
+	if cdb != nil && cdb.pointer != nil && cdb.pointer.object != nil {
+		cdbl.cleanFunc(cdb.pointer.object)
+		cdb.pointer.object = nil
+	}
 }

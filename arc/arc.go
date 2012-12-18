@@ -13,6 +13,9 @@ type ARCache struct {
 	//the hook which is called in case of cache miss
 	fetchFunc CacheFetchFunc
 
+	//clean func
+	cleanFunc CacheCleanFunc
+
 	//cdb lists
 	t1 *CDBList
 	b1 *CDBList
@@ -104,3 +107,61 @@ func (arc *ARCache) Get(key string) (object CacheObject, err error) {
 	return
 }
 
+func (arc *ARCache) Set(key string, object CacheObject) {
+	tmp := arc.cdbHash[key]
+	if tmp != nil {
+		switch tmp.where {
+			case in_t1:
+				arc.t1.RemoveIt(tmp)
+				arc.t2.InsertMRU(tmp)
+				tmp.where = in_t2
+			case in_t2:
+				arc.t2.SetMRU(tmp)
+			case in_b1:
+				arc.target_t1 = min(arc.target_t1 + max(arc.b2.Len()/arc.b1.Len(), 1), arc.size)
+				arc.b1.RemoveIt(tmp)
+				tmp.pointer = arc.replace()
+				tmp.pointer.object = object
+				tmp.where = in_t2
+				arc.t2.InsertMRU(tmp)
+			case in_b2:
+				arc.target_t1 = min(arc.target_t1 - max(arc.b1.Len()/arc.b2.Len(), 1), 0)
+				arc.b2.RemoveIt(tmp)
+				tmp.pointer = arc.replace()
+				tmp.pointer.object = object
+				tmp.where = in_t2
+				arc.t2.InsertMRU(tmp)
+		}
+		tmp.pointer.object = object
+	} else {
+		if arc.t1.Len() + arc.b1.Len() == arc.size {
+			if arc.t1.Len() < arc.size {
+				tmp = arc.b1.RemoveLRU()
+				tmp.pointer = arc.replace()
+			} else {
+				tmp = arc.t1.RemoveLRU()
+			}
+		} else if arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len() >= arc.size {
+			if arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len() >= arc.size * 2 {
+				tmp = arc.b2.RemoveLRU()
+			} else {
+				tmp = newCacheDirectorBlock()
+				tmp.pointer = newCacheEntry()
+			}
+		} else {
+			tmp := newCacheDirectorBlock()
+			tmp.pointer = newCacheEntry()
+		}
+		tmp.pointer.object = object
+		tmp.where = in_t1
+		arc.t1.InsertMRU(tmp)
+	}
+}
+
+func (arc *ARCache) SetFetchFunc(f CacheFetchFunc) {
+	arc.fetchFunc = f
+}
+
+func (arc *ARCache) SetCleanFunc(f CacheCleanFunc) {
+	arc.cleanFunc = f
+}
