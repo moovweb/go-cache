@@ -54,6 +54,7 @@ func (arc *ARCache) Get(key string) (object CacheObject, err error) {
 				if err != nil {
 					return
 				}
+				arc.target_t1 = min(arc.target_t1 + max(arc.b2.Len()/arc.b1.Len(), 1), arc.size)
 				arc.b1.RemoveIt(tmp)
 				tmp.pointer = arc.replace()
 				tmp.pointer.object = object
@@ -64,6 +65,7 @@ func (arc *ARCache) Get(key string) (object CacheObject, err error) {
 				if err != nil {
 					return
 				}
+				arc.target_t1 = min(arc.target_t1 - max(arc.b1.Len()/arc.b2.Len(), 1), 0)
 				arc.b2.RemoveIt(tmp)
 				tmp.pointer = arc.replace()
 				tmp.pointer.object = object
