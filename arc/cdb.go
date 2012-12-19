@@ -53,7 +53,7 @@ func (cdbl *CDBList) SetMRU(cdb *cacheDirectoryBlock) {
 }
 
 func (cdbl *CDBList) RemoveIt(cdb *cacheDirectoryBlock) {
-	cdb = cdbl.cdbs.Remove(cdb.element).(*cacheDirectoryBlock)
+	cdbl.cdbs.Remove(cdb.element)
 }
 
 func (cdbl *CDBList) Len() int {

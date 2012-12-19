@@ -25,7 +25,6 @@ func TestGetARC(t *testing.T) {
 		countAdded += 1
 		return key, nil
 	})
-	println(time.Now().Unix())
 	rand.Seed(time.Now().Unix())
 
 	for i := 0; i < countAccess; i ++ {
@@ -40,12 +39,6 @@ func TestGetARC(t *testing.T) {
 	}
 
 	countMiss := 0
-	countAccess = 10
-	c.SetCleanFunc(func (obj cache.CacheObject) error {
-		countCleaned += 1
-		println("replacing", obj.(string))
-		return nil
-	})
 	for i := 0; i < countAccess; i ++ {
 		j := rand.Intn(cacheSize*2)
 		val, err := c.Get("key"+strconv.Itoa(j))
@@ -56,7 +49,7 @@ func TestGetARC(t *testing.T) {
 			t.Errorf("key does not match the value")
 		}
 	}
-	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess, countMiss)
+	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
 
 	c.CheckCache()
 
@@ -88,7 +81,6 @@ func TestGetLRU(t *testing.T) {
 		countAdded += 1
 		return key, nil
 	})
-	println(time.Now().Unix())
 	rand.Seed(time.Now().Unix())
 
 	for i := 0; i < countAccess; i ++ {
@@ -103,12 +95,6 @@ func TestGetLRU(t *testing.T) {
 	}
 
 	countMiss := 0
-	countAccess = 10
-	c.SetCleanFunc(func (obj cache.CacheObject) error {
-		countCleaned += 1
-		println("replacing", obj.(string))
-		return nil
-	})
 	for i := 0; i < countAccess; i ++ {
 		j := rand.Intn(cacheSize*2)
 		val, err := c.Get("key"+strconv.Itoa(j))
@@ -119,7 +105,7 @@ func TestGetLRU(t *testing.T) {
 			t.Errorf("key does not match the value")
 		}
 	}
-	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess, countMiss)
+	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
 
 	c.CheckCache()
 

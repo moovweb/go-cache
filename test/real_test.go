@@ -8,7 +8,7 @@ import "strings"
 import "io/ioutil"
 
 func TestARC(t *testing.T) {
-	cacheSize := 100
+	cacheSize := 25
 	countCleaned := 0
 	countAdded := 0
 
@@ -19,7 +19,6 @@ func TestARC(t *testing.T) {
 	}
 	str := string(data)
 	lines := strings.Split(str, "\n")
-	println("# of lines", len(lines))
 
 	c.SetCleanFunc(func (obj cache.CacheObject) error {
 		countCleaned += 1
@@ -38,7 +37,7 @@ func TestARC(t *testing.T) {
 			countMiss += 1
 		}
 	}
-	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess, countMiss)
+	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
 
 	c.CheckCache()
 
@@ -54,7 +53,7 @@ func TestARC(t *testing.T) {
 }
 
 func TestLRU(t *testing.T) {
-	cacheSize := 100
+	cacheSize := 25
 	countCleaned := 0
 	countAdded := 0
 
@@ -65,7 +64,6 @@ func TestLRU(t *testing.T) {
 	}
 	str := string(data)
 	lines := strings.Split(str, "\n")
-	println("# of lines", len(lines))
 
 	c.SetCleanFunc(func (obj cache.CacheObject) error {
 		countCleaned += 1
@@ -84,7 +82,7 @@ func TestLRU(t *testing.T) {
 			countMiss += 1
 		}
 	}
-	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess, countMiss)
+	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
 
 	c.CheckCache()
 
