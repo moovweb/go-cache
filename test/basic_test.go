@@ -4,22 +4,24 @@ import "testing"
 import "strconv"
 import "go-cache"
 import "go-cache/arc"
+import "go-cache/lru"
 import "math/rand"
 import "time"
 
-func TestGet(t *testing.T) {
+func TestGetARC(t *testing.T) {
 	cacheSize := 100
 	countCleaned := 0
 	countAdded := 0
 	countAccess := 2000
 
-	arc := arc.NewArcCache(cacheSize)
+	c := arc.NewArcCache(cacheSize)
 
-	arc.SetCleanFunc(func (obj cache.CacheObject) error {
+	c.SetCleanFunc(func (obj cache.CacheObject) error {
 		countCleaned += 1
+		//println("replacing", obj.(string))
 		return nil
 	})
-	arc.SetFetchFunc(func (key string) (cache.CacheObject, error) {
+	c.SetFetchFunc(func (key string) (cache.CacheObject, error) {
 		countAdded += 1
 		return key, nil
 	})
@@ -28,7 +30,7 @@ func TestGet(t *testing.T) {
 
 	for i := 0; i < countAccess; i ++ {
 		j := rand.Intn(cacheSize*2)
-		val, err := arc.Get("key"+strconv.Itoa(j))
+		val, err := c.Get("key"+strconv.Itoa(j))
 		if err != cache.CacheMiss && err != nil {
 			t.Errorf("unexpected err:", err.Error())
 		}
@@ -38,9 +40,15 @@ func TestGet(t *testing.T) {
 	}
 
 	countMiss := 0
+	countAccess = 10
+	c.SetCleanFunc(func (obj cache.CacheObject) error {
+		countCleaned += 1
+		println("replacing", obj.(string))
+		return nil
+	})
 	for i := 0; i < countAccess; i ++ {
 		j := rand.Intn(cacheSize*2)
-		val, err := arc.Get("key"+strconv.Itoa(j))
+		val, err := c.Get("key"+strconv.Itoa(j))
 		if err == cache.CacheMiss {
 			countMiss += 1
 		}
@@ -48,15 +56,78 @@ func TestGet(t *testing.T) {
 			t.Errorf("key does not match the value")
 		}
 	}
-	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
+	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess, countMiss)
 
-	arc.CheckCache()
+	c.CheckCache()
 
 	if countCleaned + cacheSize != countAdded {
 		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, cacheSize)
 	}
 	
-	for key, obj := range(arc.GetAllObjects()) {
+	for key, obj := range(c.GetAllObjects()) {
+		if key != obj.(string) {
+			t.Errorf("key does not match the cached value")
+		}
+	}
+}
+
+func TestGetLRU(t *testing.T) {
+	cacheSize := 100
+	countCleaned := 0
+	countAdded := 0
+	countAccess := 2000
+
+	c := lru.NewLRUCache(cacheSize)
+
+	c.SetCleanFunc(func (obj cache.CacheObject) error {
+		countCleaned += 1
+		//println("replacing", obj.(string))
+		return nil
+	})
+	c.SetFetchFunc(func (key string) (cache.CacheObject, error) {
+		countAdded += 1
+		return key, nil
+	})
+
+	rand.Seed(time.Now().Unix())
+
+	for i := 0; i < countAccess; i ++ {
+		j := rand.Intn(cacheSize*2)
+		val, err := c.Get("key"+strconv.Itoa(j))
+		if err != cache.CacheMiss && err != nil {
+			t.Errorf("unexpected err:", err.Error())
+		}
+		if val == nil || val.(string) != "key"+strconv.Itoa(j) {
+			t.Errorf("key does not match the value")
+		}
+	}
+
+	countMiss := 0
+	countAccess = 10
+	c.SetCleanFunc(func (obj cache.CacheObject) error {
+		countCleaned += 1
+		println("replacing", obj.(string))
+		return nil
+	})
+	for i := 0; i < countAccess; i ++ {
+		j := rand.Intn(cacheSize*2)
+		val, err := c.Get("key"+strconv.Itoa(j))
+		if err == cache.CacheMiss {
+			countMiss += 1
+		}
+		if val == nil || val.(string) != "key"+strconv.Itoa(j) {
+			t.Errorf("key does not match the value")
+		}
+	}
+	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess, countMiss)
+
+	c.CheckCache()
+
+	if countCleaned + cacheSize != countAdded {
+		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, cacheSize)
+	}
+	
+	for key, obj := range(c.GetAllObjects()) {
 		if key != obj.(string) {
 			t.Errorf("key does not match the cached value")
 		}
