@@ -25,7 +25,7 @@ func TestGetARC(t *testing.T) {
 		countAdded += 1
 		return key, nil
 	})
-
+	println(time.Now().Unix())
 	rand.Seed(time.Now().Unix())
 
 	for i := 0; i < countAccess; i ++ {
@@ -88,7 +88,7 @@ func TestGetLRU(t *testing.T) {
 		countAdded += 1
 		return key, nil
 	})
-
+	println(time.Now().Unix())
 	rand.Seed(time.Now().Unix())
 
 	for i := 0; i < countAccess; i ++ {

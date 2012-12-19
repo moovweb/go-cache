@@ -1,4 +1,4 @@
-package arc
+package lru
 
 import . "go-cache"
 
