@@ -62,8 +62,12 @@ func (arc *ARCache) replace() *cacheEntry {
 func (arc *ARCache) Get(key string) (object CacheObject, err error) {
 	tmp, err := arc.get(key)
 	if err == CacheMiss {
-		object, err = arc.fetchFunc(key)
+		var err1 error
+		object, err1 = arc.fetchFunc(key)
 		arc.setObject(tmp.pointer, object)
+		if err1 != nil {
+			err = err1
+		}
 	} else {
 		object = tmp.pointer.object
 	}
@@ -94,7 +98,7 @@ func (arc *ARCache) get(key string) (*cacheDirectoryBlock, error) {
 				arc.target_t1 = min(arc.target_t1 + max(arc.b2.Len()/arc.b1.Len(), 1), arc.size)
 				arc.b1.RemoveIt(tmp)
 			} else {
-				arc.target_t1 = min(arc.target_t1 - max(arc.b1.Len()/arc.b2.Len(), 1), 0)
+				arc.target_t1 = max(arc.target_t1 - max(arc.b1.Len()/arc.b2.Len(), 1), 0)
 				arc.b2.RemoveIt(tmp)
 			}
 			tmp.pointer = arc.replace()
