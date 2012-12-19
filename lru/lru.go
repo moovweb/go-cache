@@ -99,7 +99,7 @@ func (c *LRUCache) clearObject(entry *cacheEntry) {
 	c.setObject(entry, nil)
 }
 
-func (c *LRUCache) setObject(entry *cacheEntry, obj interface{}) {
+func (c *LRUCache) setObject(entry *cacheEntry, obj CacheObject) {
 	if entry != nil {
 		if entry.object != nil && c.cleanFunc != nil {
 			c.cleanFunc(entry.object)

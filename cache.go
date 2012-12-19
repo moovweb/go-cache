@@ -2,7 +2,9 @@ package cache
 
 import "errors"
 
-type CacheObject interface {}
+type CacheObject interface {
+	Size() int
+}
 
 type CacheFetchFunc func(string) (CacheObject, error)
 type CacheCleanFunc func(CacheObject) error

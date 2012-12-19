@@ -9,6 +9,14 @@ import "go-cache/random"
 import "math/rand"
 import "time"
 
+type StringObject struct {
+	s string
+}
+
+func (o *StringObject) Size() int {
+	return len(o.s)
+}
+
 func TestGetARC(t *testing.T) {
 	cacheSize := 100
 	countCleaned := 0
@@ -24,7 +32,7 @@ func TestGetARC(t *testing.T) {
 	})
 	c.SetFetchFunc(func (key string) (cache.CacheObject, error) {
 		countAdded += 1
-		return key, nil
+		return &StringObject{s:key}, nil
 	})
 	rand.Seed(time.Now().Unix())
 
@@ -34,7 +42,7 @@ func TestGetARC(t *testing.T) {
 		if err != cache.CacheMiss && err != nil {
 			t.Errorf("unexpected err:", err.Error())
 		}
-		if val == nil || val.(string) != "key"+strconv.Itoa(j) {
+		if val == nil || val.(*StringObject).s != "key"+strconv.Itoa(j) {
 			t.Errorf("key does not match the value")
 		}
 	}
@@ -46,7 +54,7 @@ func TestGetARC(t *testing.T) {
 		if err == cache.CacheMiss {
 			countMiss += 1
 		}
-		if val == nil || val.(string) != "key"+strconv.Itoa(j) {
+		if val == nil || val.(*StringObject).s != "key"+strconv.Itoa(j) {
 			t.Errorf("key does not match the value")
 		}
 	}
@@ -59,7 +67,7 @@ func TestGetARC(t *testing.T) {
 	}
 	
 	for key, obj := range(c.GetAllObjects()) {
-		if key != obj.(string) {
+		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
 	}
@@ -80,7 +88,7 @@ func TestGetLRU(t *testing.T) {
 	})
 	c.SetFetchFunc(func (key string) (cache.CacheObject, error) {
 		countAdded += 1
-		return key, nil
+		return &StringObject{s:key}, nil
 	})
 	rand.Seed(time.Now().Unix())
 
@@ -90,7 +98,7 @@ func TestGetLRU(t *testing.T) {
 		if err != cache.CacheMiss && err != nil {
 			t.Errorf("unexpected err:", err.Error())
 		}
-		if val == nil || val.(string) != "key"+strconv.Itoa(j) {
+		if val == nil || val.(*StringObject).s != "key"+strconv.Itoa(j) {
 			t.Errorf("key does not match the value")
 		}
 	}
@@ -102,7 +110,7 @@ func TestGetLRU(t *testing.T) {
 		if err == cache.CacheMiss {
 			countMiss += 1
 		}
-		if val == nil || val.(string) != "key"+strconv.Itoa(j) {
+		if val == nil || val.(*StringObject).s != "key"+strconv.Itoa(j) {
 			t.Errorf("key does not match the value")
 		}
 	}
@@ -115,7 +123,7 @@ func TestGetLRU(t *testing.T) {
 	}
 	
 	for key, obj := range(c.GetAllObjects()) {
-		if key != obj.(string) {
+		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
 	}
@@ -136,7 +144,7 @@ func TestGetRRC(t *testing.T) {
 	})
 	c.SetFetchFunc(func (key string) (cache.CacheObject, error) {
 		countAdded += 1
-		return key, nil
+		return &StringObject{s:key}, nil
 	})
 	rand.Seed(time.Now().Unix())
 
@@ -146,7 +154,7 @@ func TestGetRRC(t *testing.T) {
 		if err != cache.CacheMiss && err != nil {
 			t.Errorf("unexpected err:", err.Error())
 		}
-		if val == nil || val.(string) != "key"+strconv.Itoa(j) {
+		if val == nil || val.(*StringObject).s != "key"+strconv.Itoa(j) {
 			t.Errorf("key does not match the value")
 		}
 	}
@@ -158,7 +166,7 @@ func TestGetRRC(t *testing.T) {
 		if err == cache.CacheMiss {
 			countMiss += 1
 		}
-		if val == nil || val.(string) != "key"+strconv.Itoa(j) {
+		if val == nil || val.(*StringObject).s != "key"+strconv.Itoa(j) {
 			t.Errorf("key does not match the value")
 		}
 	}
@@ -171,7 +179,7 @@ func TestGetRRC(t *testing.T) {
 	}
 	
 	for key, obj := range(c.GetAllObjects()) {
-		if key != obj.(string) {
+		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
 	}

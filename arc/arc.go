@@ -162,7 +162,7 @@ func (arc *ARCache) clearObject(entry *cacheEntry) {
 	arc.setObject(entry, nil)
 }
 
-func (arc *ARCache) setObject(entry *cacheEntry, obj interface{}) {
+func (arc *ARCache) setObject(entry *cacheEntry, obj CacheObject) {
 	if entry != nil {
 		if entry.object != nil && arc.cleanFunc != nil {
 			arc.cleanFunc(entry.object)

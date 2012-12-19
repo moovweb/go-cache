@@ -27,7 +27,7 @@ func TestARC(t *testing.T) {
 	})
 	c.SetFetchFunc(func (key string) (cache.CacheObject, error) {
 		countAdded += 1
-		return key, nil
+		return &StringObject{s:key}, nil
 	})
 
 	countMiss := 0
@@ -47,7 +47,7 @@ func TestARC(t *testing.T) {
 	}
 	
 	for key, obj := range(c.GetAllObjects()) {
-		if key != obj.(string) {
+		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
 	}
@@ -72,7 +72,7 @@ func TestLRU(t *testing.T) {
 	})
 	c.SetFetchFunc(func (key string) (cache.CacheObject, error) {
 		countAdded += 1
-		return key, nil
+		return &StringObject{s:key}, nil
 	})
 
 	countMiss := 0
@@ -92,7 +92,7 @@ func TestLRU(t *testing.T) {
 	}
 	
 	for key, obj := range(c.GetAllObjects()) {
-		if key != obj.(string) {
+		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
 	}
@@ -117,7 +117,7 @@ func TestRRC(t *testing.T) {
 	})
 	c.SetFetchFunc(func (key string) (cache.CacheObject, error) {
 		countAdded += 1
-		return key, nil
+		return &StringObject{s:key}, nil
 	})
 
 	countMiss := 0
@@ -137,7 +137,7 @@ func TestRRC(t *testing.T) {
 	}
 	
 	for key, obj := range(c.GetAllObjects()) {
-		if key != obj.(string) {
+		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
 	}
