@@ -1,132 +1,63 @@
 package lru
 
 import . "go-cache"
-import "time"
+import "go-cache/base"
 
 type LRUCache struct {
-	//max number of cache entries
-	size int
-
-	//cache entries
-	//each entry stores one cache object
-	//entries []*cacheEntry
-
-	//the hook which is called in case of cache miss
-	fetchFunc CacheFetchFunc
-
-	//clean func
-	cleanFunc CacheCleanFunc
-
+	*base.BaseCache
+	
 	//cdb lists
 	cdbl *CDBList
-	
-	//cdb hash table for searching cdb
-	cdbHash map[string]*cacheDirectoryBlock
-
-	Total int64
-	Count int64
 }
 
 func NewLRUCache(size int) *LRUCache {
-	cache := &LRUCache{}
-	cache.size = size
-	cache.cdbl = newCdbList()
-	cache.cdbHash = make(map[string]*cacheDirectoryBlock)
-	return cache
+	c := &LRUCache{}
+	c.BaseCache = base.NewBaseCache(size)
+	c.cdbl = newCdbList()
+	return c
 }
 
-func (c *LRUCache) Get(key string) (object CacheObject, err error) {
-	start := time.Now()
-	tmp, err := c.get(key)
-	t := time.Since(start)
-	c.Total += t.Nanoseconds()
-	c.Count += 1
-	if err == CacheMiss {
-		var err1 error
-		object, err1 = c.fetchFunc(key)
-		c.setObject(tmp.pointer, object)
-		if err1 != nil {
-			err = err1
-		}
-	} else {
-		object = tmp.pointer.object
-	}
-	return
+func NewSafeLRUCache(size int) *LRUCache {
+	c := &LRUCache{}
+	c.BaseCache = base.NewSafeBaseCache(size)
+	c.cdbl = newCdbList()
+	return c
 }
 
 func (c *LRUCache) Set(key string, object CacheObject) {
 	tmp, _ := c.get(key)
-	c.setObject(tmp.pointer, object)
+	entry := tmp.GetEntry()
+	entry.SetObject(object, c.CleanFunc)
 }
 
 //get a CDB by a key
 //in case of CacheMiss, the object stores in the cache entry is no longer valid
-func (c *LRUCache) get(key string) (*cacheDirectoryBlock, error) {
-	tmp := c.cdbHash[key]
+func (c *LRUCache) get(key string) (base.CacheDirectoryBlock, error) {
+	c.Lock()
+	defer c.Unlock()
+	tmp := c.CdbHash[key]
 	var err error
 	if tmp != nil {
 		c.cdbl.SetMRU(tmp)
+		c.Hits += 1
 	} else {
-		if c.cdbl.Len() == c.size {
+		if c.cdbl.Len() == c.Size {
 			tmp = c.cdbl.RemoveLRU()
 		} else {
 			tmp = newCacheDirectorBlock()
-			tmp.pointer = newCacheEntry()
+			tmp.SetEntry(base.NewCacheEntry())
 		}
-		if len(tmp.key) > 0 {
-			delete(c.cdbHash, tmp.key)
+		if len(tmp.GetKey()) > 0 {
+			delete(c.CdbHash, tmp.GetKey())
 		}
-		tmp.key = key
+		tmp.SetKey(key)
 		c.cdbl.InsertMRU(tmp)
-		c.cdbHash[key] = tmp
+		c.CdbHash[key] = tmp
 		err = CacheMiss
 	}
-	if tmp.pointer == nil {
+	c.Accesses += 1
+	if tmp.IsEntryNil() {
 		panic("cannot be nil")
 	}
 	return tmp, err
-}
-
-func (c *LRUCache) SetFetchFunc(f CacheFetchFunc) {
-	c.fetchFunc = f
-}
-
-func (c *LRUCache) SetCleanFunc(f CacheCleanFunc) {
-	c.cleanFunc = f
-}
-
-func (c *LRUCache) GetAllObjects() map[string]CacheObject {
-	all := make(map[string]CacheObject)
-	for key, cdb := range(c.cdbHash) {
-		all[key] = cdb.pointer.object
-	}
-	return all
-}
-
-func (c *LRUCache) clearObject(entry *cacheEntry) {
-	c.setObject(entry, nil)
-}
-
-func (c *LRUCache) setObject(entry *cacheEntry, obj CacheObject) {
-	if entry != nil {
-		if entry.object != nil && c.cleanFunc != nil {
-			c.cleanFunc(entry.object)
-		}
-		entry.object = obj
-	}
-}
-
-func (c *LRUCache) fetch(key string) (CacheObject, error) {
-	if c.fetchFunc == nil {
-		return nil, CacheMiss
-	}
-	return c.fetchFunc(key)
-}
-
-func (c *LRUCache) CheckCache() {
-	for key, cdb := range(c.cdbHash) {
-		if cdb.key != key {
-			panic("keys don't match")
-		}
-	}
 }

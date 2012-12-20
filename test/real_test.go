@@ -8,6 +8,14 @@ import "go-cache/random"
 import "strings"
 import "io/ioutil"
 
+type StringObject struct {
+	s string
+}
+
+func (o *StringObject) Size() int {
+	return len(o.s)
+}
+
 func TestARC(t *testing.T) {
 	cacheSize := 30
 	countCleaned := 0
@@ -38,8 +46,8 @@ func TestARC(t *testing.T) {
 			countMiss += 1
 		}
 	}
-	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
-	println("avg get time:", c.Total/c.Count)
+	println("cache hit rate:", c.GetHitRate())
+	//println("avg get time:", c.Total/c.Count)
 
 	c.CheckCache()
 
@@ -76,21 +84,19 @@ func TestLRU(t *testing.T) {
 		return &StringObject{s:key}, nil
 	})
 
-	countMiss := 0
 	countAccess := len(lines)
+	count := 0
 	for i := 0; i < countAccess; i ++ {
-		_, err := c.Get(lines[i])
-		if err == cache.CacheMiss {
-			countMiss += 1
-		}
+		c.Get(lines[i])
+		count += 1
 	}
-	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
-	println("avg get time:", c.Total/c.Count)
+	println("cache hit rate:", c.GetHitRate())
+	//println("avg get time:", c.Total/c.Count)
 
 	c.CheckCache()
 
 	if countCleaned + cacheSize != countAdded {
-		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, cacheSize)
+		t.Fatalf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, cacheSize)
 	}
 	
 	for key, obj := range(c.GetAllObjects()) {
@@ -122,17 +128,13 @@ func TestRRC(t *testing.T) {
 		return &StringObject{s:key}, nil
 	})
 
-	countMiss := 0
 	countAccess := len(lines)
 
 	for i := 0; i < countAccess; i ++ {
-		_, err := c.Get(lines[i])
-		if err == cache.CacheMiss {
-			countMiss += 1
-		}
+		c.Get(lines[i])
 	}
-	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
-	println("avg get time:", c.Total/c.Count)
+	println("cache hit rate:", c.GetHitRate())
+	//println("avg get time:", c.Total/c.Count)
 
 	c.CheckCache()
 

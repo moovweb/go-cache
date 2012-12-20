@@ -2,24 +2,19 @@ package base
 
 import . "go-cache"
 
-type BaseCache struct {
-	//max number of cache entries
-	Size int
-
-	//the hook which is called in case of cache miss
-	FetchFunc CacheFetchFunc
-
-	//clean func
-	CleanFunc CacheCleanFunc
-
-	//hash table for searching cache entries
-	CdbHash map[string]CacheDirectoryBlock
-}
-
 func NewBaseCache(size int) *BaseCache {
 	cache := &BaseCache{}
 	cache.Size = size
 	cache.CdbHash = make(map[string]CacheDirectoryBlock)
+	cache.isGoroutineSafe = false
+	return cache
+}
+
+func NewSafeBaseCache(size int) *BaseCache {
+	cache := &BaseCache{}
+	cache.Size = size
+	cache.CdbHash = make(map[string]CacheDirectoryBlock)
+	cache.isGoroutineSafe = true
 	return cache
 }
 
@@ -47,6 +42,27 @@ func (c *BaseCache) Fetch(key string) (CacheObject, error) {
 		return nil, CacheMiss
 	}
 	return c.FetchFunc(key)
+}
+
+func (c *BaseCache) GetHitRate() int {
+	c.Lock()
+	defer c.Unlock()
+	if c.Accesses <= 0 {
+		return 0
+	}
+	return int(c.Hits*100/c.Accesses)
+}
+
+func (c *BaseCache) Lock() {
+	if c.isGoroutineSafe {
+		c.mutex.Lock()
+	}
+}
+
+func (c *BaseCache) Unlock() {
+	if c.isGoroutineSafe {
+		c.mutex.Unlock()
+	}
 }
 
 func (c *BaseCache) CheckCache() {

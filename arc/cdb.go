@@ -2,7 +2,7 @@ package arc
 
 import (
 	"container/list"
-	"sync"
+	"go-cache/base"
 )
 
 const (
@@ -14,18 +14,16 @@ const (
 
 type CDBList struct {
 	cdbs *list.List
-	mutex sync.Mutex
 }
 
-type cacheDirectoryBlock struct {
+type ArcCdb struct {
 	element *list.Element
-	pointer *cacheEntry
 	where int
-	key string
+	base.BaseCdb
 }
 
-func newCacheDirectorBlock() *cacheDirectoryBlock {
-	cdb := &cacheDirectoryBlock{}
+func newCacheDirectorBlock() *ArcCdb {
+	cdb := &ArcCdb{}
 	return cdb
 }
 
@@ -35,25 +33,25 @@ func newCdbList() *CDBList {
 	return cdbl
 }
 
-func (cdbl *CDBList) RemoveLRU() *cacheDirectoryBlock {
+func (cdbl *CDBList) RemoveLRU() base.CacheDirectoryBlock {
 	lru := cdbl.cdbs.Front()
 	if lru == nil {
 		return nil
 	}
-	cdb := cdbl.cdbs.Remove(lru).(*cacheDirectoryBlock)
+	cdb := cdbl.cdbs.Remove(lru).(base.CacheDirectoryBlock)
 	return cdb
 }
 
-func (cdbl *CDBList) InsertMRU(cdb *cacheDirectoryBlock) {
-	cdb.element = cdbl.cdbs.PushBack(cdb)
+func (cdbl *CDBList) InsertMRU(cdb base.CacheDirectoryBlock) {
+	cdb.(*ArcCdb).element = cdbl.cdbs.PushBack(cdb)
 }
 
-func (cdbl *CDBList) SetMRU(cdb *cacheDirectoryBlock) {
-	cdbl.cdbs.MoveToBack(cdb.element)
+func (cdbl *CDBList) SetMRU(cdb base.CacheDirectoryBlock) {
+	cdbl.cdbs.MoveToBack(cdb.(*ArcCdb).element)
 }
 
-func (cdbl *CDBList) RemoveIt(cdb *cacheDirectoryBlock) {
-	cdbl.cdbs.Remove(cdb.element)
+func (cdbl *CDBList) RemoveIt(cdb base.CacheDirectoryBlock) {
+	cdbl.cdbs.Remove(cdb.(*ArcCdb).element)
 }
 
 func (cdbl *CDBList) Len() int {
