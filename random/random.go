@@ -1,130 +1,74 @@
 package rrc
 
 import . "go-cache"
+import "go-cache/base"
 import "time"
 
 type RRCache struct {
-	//max number of cache entries
-	size int
-
-	//cache entries
-	//each entry stores one cache object
-	//entries []*cacheEntry
-
-	//the hook which is called in case of cache miss
-	fetchFunc CacheFetchFunc
-
-	//clean func
-	cleanFunc CacheCleanFunc
-
+	*base.BaseCache
+	
 	//cdb lists
 	cdbl *CDBList
-	
-	//cdb hash table for searching cdb
-	cdbHash map[string]*cacheDirectoryBlock
 
 	Total int64
 	Count int64
 }
 
 func NewRRCache(size int) *RRCache {
-	cache := &RRCache{}
-	cache.size = size
-	cache.cdbl = newCdbList(size)
-	cache.cdbHash = make(map[string]*cacheDirectoryBlock)
-	return cache
+	c:= &RRCache{}
+	c.BaseCache = base.NewBaseCache(size)
+	c.cdbl = newCdbList(size)
+	return c
 }
 
 func (c *RRCache) Get(key string) (object CacheObject, err error) {
 	start := time.Now()
 	tmp, err := c.get(key)
+	entry := tmp.GetEntry()
 	t := time.Since(start)
 	c.Total += t.Nanoseconds()
 	c.Count += 1
 	if err == CacheMiss {
 		var err1 error
-		object, err1 = c.fetchFunc(key)
-		c.setObject(tmp.pointer, object)
+		object, err1 = c.FetchFunc(key)
+		entry.SetObject(object, c.CleanFunc)
 		if err1 != nil {
 			err = err1
 		}
 	} else {
-		object = tmp.pointer.object
+		object = entry.GetObject()
 	}
 	return
 }
 
 func (c *RRCache) Set(key string, object CacheObject) {
 	tmp, _ := c.get(key)
-	c.setObject(tmp.pointer, object)
+	entry := tmp.GetEntry()
+	entry.SetObject(object, c.CleanFunc)
 }
 
 //get a CDB by a key
 //in case of CacheMiss, the object stores in the cache entry is no longer valid
-func (c *RRCache) get(key string) (*cacheDirectoryBlock, error) {
-	tmp := c.cdbHash[key]
+func (c *RRCache) get(key string) (base.CacheDirectoryBlock, error) {
+	tmp := c.CdbHash[key]
 	var err error
 	if tmp == nil {
-		if c.cdbl.Len() == c.size {
-			tmp = c.cdbl.RandomSelection()
+		if c.cdbl.Len() == c.Size {
+			tmp = c.cdbl.Select()
 		} else {
 			tmp = newCacheDirectorBlock()
-			tmp.pointer = newCacheEntry()
+			tmp.SetEntry(base.NewCacheEntry())
 			c.cdbl.Add(tmp)
 		}
-		if len(tmp.key) > 0 {
-			delete(c.cdbHash, tmp.key)
+		if len(tmp.GetKey()) > 0 {
+			delete(c.CdbHash, tmp.GetKey())
 		}
-		tmp.key = key
-		c.cdbHash[key] = tmp
+		tmp.SetKey(key)
+		c.CdbHash[key] = tmp
 		err = CacheMiss
 	}
-	if tmp.pointer == nil {
+	if tmp.IsEntryNil() {
 		panic("cannot be nil")
 	}
 	return tmp, err
-}
-
-func (c *RRCache) SetFetchFunc(f CacheFetchFunc) {
-	c.fetchFunc = f
-}
-
-func (c *RRCache) SetCleanFunc(f CacheCleanFunc) {
-	c.cleanFunc = f
-}
-
-func (c *RRCache) GetAllObjects() map[string]CacheObject {
-	all := make(map[string]CacheObject)
-	for key, cdb := range(c.cdbHash) {
-		all[key] = cdb.pointer.object
-	}
-	return all
-}
-
-func (c *RRCache) clearObject(entry *cacheEntry) {
-	c.setObject(entry, nil)
-}
-
-func (c *RRCache) setObject(entry *cacheEntry, obj CacheObject) {
-	if entry != nil {
-		if entry.object != nil && c.cleanFunc != nil {
-			c.cleanFunc(entry.object)
-		}
-		entry.object = obj
-	}
-}
-
-func (c *RRCache) fetch(key string) (CacheObject, error) {
-	if c.fetchFunc == nil {
-		return nil, CacheMiss
-	}
-	return c.fetchFunc(key)
-}
-
-func (c *RRCache) CheckCache() {
-	for key, cdb := range(c.cdbHash) {
-		if cdb.key != key {
-			panic("keys don't match")
-		}
-	}
 }
