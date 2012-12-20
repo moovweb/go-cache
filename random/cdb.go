@@ -1,17 +1,14 @@
 package rrc
 
 import (
-	"sync"
 	"math/rand"
 )
 
 type CDBList struct {
-	cdbs []*cacheEntry
-	mutex sync.Mutex
+	cdbs []*cacheDirectoryBlock
 }
 
 type cacheDirectoryBlock struct {
-	index int
 	pointer *cacheEntry
 	key string
 }
@@ -23,14 +20,12 @@ func newCacheDirectorBlock() *cacheDirectoryBlock {
 
 func newCdbList(size int) *CDBList {
 	cdbl := &CDBList{}
-	cdbl.cdbs = make([]*cacheEntry, 0, size)
+	cdbl.cdbs = make([]*cacheDirectoryBlock, 0, size)
 	return cdbl
 }
 
 func (cdbl *CDBList) Add(cdb *cacheDirectoryBlock) {
-	index := len(cdbl.cdbs)
-	cdbl.cdbs = append(cdbl.cdbs, cdb.pointer)
-	cdb.index = index
+	cdbl.cdbs = append(cdbl.cdbs, cdb)
 }
 
 func (cdbl *CDBList) Len() int {
@@ -40,7 +35,7 @@ func (cdbl *CDBList) Len() int {
 func (cdbl *CDBList) RandomSelection() *cacheDirectoryBlock {
 	num := cdbl.Len()
 	if num > 0 {
-		return cdbl.cdbs[rand.Intn(num)].cdb
+		return cdbl.cdbs[rand.Intn(num)]
 	}
 	return nil
 }

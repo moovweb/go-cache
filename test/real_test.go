@@ -9,7 +9,7 @@ import "strings"
 import "io/ioutil"
 
 func TestARC(t *testing.T) {
-	cacheSize := 25
+	cacheSize := 30
 	countCleaned := 0
 	countAdded := 0
 
@@ -39,6 +39,7 @@ func TestARC(t *testing.T) {
 		}
 	}
 	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
+	println("avg get time:", c.Total/c.Count)
 
 	c.CheckCache()
 
@@ -54,7 +55,7 @@ func TestARC(t *testing.T) {
 }
 
 func TestLRU(t *testing.T) {
-	cacheSize := 25
+	cacheSize := 30
 	countCleaned := 0
 	countAdded := 0
 
@@ -84,6 +85,7 @@ func TestLRU(t *testing.T) {
 		}
 	}
 	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
+	println("avg get time:", c.Total/c.Count)
 
 	c.CheckCache()
 
@@ -99,7 +101,7 @@ func TestLRU(t *testing.T) {
 }
 
 func TestRRC(t *testing.T) {
-	cacheSize := 25
+	cacheSize := 30
 	countCleaned := 0
 	countAdded := 0
 
@@ -122,6 +124,7 @@ func TestRRC(t *testing.T) {
 
 	countMiss := 0
 	countAccess := len(lines)
+
 	for i := 0; i < countAccess; i ++ {
 		_, err := c.Get(lines[i])
 		if err == cache.CacheMiss {
@@ -129,6 +132,7 @@ func TestRRC(t *testing.T) {
 		}
 	}
 	println("cache hit rate:", (100*(countAccess-countMiss))/countAccess)
+	println("avg get time:", c.Total/c.Count)
 
 	c.CheckCache()
 

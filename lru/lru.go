@@ -1,6 +1,7 @@
 package lru
 
 import . "go-cache"
+import "time"
 
 type LRUCache struct {
 	//max number of cache entries
@@ -21,6 +22,9 @@ type LRUCache struct {
 	
 	//cdb hash table for searching cdb
 	cdbHash map[string]*cacheDirectoryBlock
+
+	Total int64
+	Count int64
 }
 
 func NewLRUCache(size int) *LRUCache {
@@ -32,7 +36,11 @@ func NewLRUCache(size int) *LRUCache {
 }
 
 func (c *LRUCache) Get(key string) (object CacheObject, err error) {
+	start := time.Now()
 	tmp, err := c.get(key)
+	t := time.Since(start)
+	c.Total += t.Nanoseconds()
+	c.Count += 1
 	if err == CacheMiss {
 		var err1 error
 		object, err1 = c.fetchFunc(key)

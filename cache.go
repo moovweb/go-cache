@@ -15,6 +15,7 @@ type Cache interface {
 	GetAllObjects() map[string]CacheObject
 	SetFetchFunc(CacheFetchFunc)
 	SetCleanFunc(CacheCleanFunc)
+	Resize(size int)
 }
 
 var CacheMiss = errors.New("miss")

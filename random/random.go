@@ -1,6 +1,7 @@
 package rrc
 
 import . "go-cache"
+import "time"
 
 type RRCache struct {
 	//max number of cache entries
@@ -21,6 +22,9 @@ type RRCache struct {
 	
 	//cdb hash table for searching cdb
 	cdbHash map[string]*cacheDirectoryBlock
+
+	Total int64
+	Count int64
 }
 
 func NewRRCache(size int) *RRCache {
@@ -32,7 +36,11 @@ func NewRRCache(size int) *RRCache {
 }
 
 func (c *RRCache) Get(key string) (object CacheObject, err error) {
+	start := time.Now()
 	tmp, err := c.get(key)
+	t := time.Since(start)
+	c.Total += t.Nanoseconds()
+	c.Count += 1
 	if err == CacheMiss {
 		var err1 error
 		object, err1 = c.fetchFunc(key)
@@ -62,7 +70,6 @@ func (c *RRCache) get(key string) (*cacheDirectoryBlock, error) {
 		} else {
 			tmp = newCacheDirectorBlock()
 			tmp.pointer = newCacheEntry()
-			tmp.pointer.cdb = tmp
 			c.cdbl.Add(tmp)
 		}
 		if len(tmp.key) > 0 {

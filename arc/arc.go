@@ -1,6 +1,8 @@
 package arc
 
 import . "go-cache"
+import "time"
+import "sync"
 
 type ARCache struct {
 	//max number of cache entries
@@ -27,29 +29,35 @@ type ARCache struct {
 
 	//param
 	target_t1 int
+
+	//mutex
+	mutex sync.Mutex
+
+	Total int64
+	Count int64
 }
 
 func NewArcCache(size int) *ARCache {
-	arc := &ARCache{}
-	arc.size = size
-	arc.t1 = newCdbList()
-	arc.b1 = newCdbList()
-	arc.t2 = newCdbList()
-	arc.b2 = newCdbList()
-	arc.cdbHash = make(map[string]*cacheDirectoryBlock)
-	return arc
+	c := &ARCache{}
+	c.size = size
+	c.t1 = newCdbList()
+	c.b1 = newCdbList()
+	c.t2 = newCdbList()
+	c.b2 = newCdbList()
+	c.cdbHash = make(map[string]*cacheDirectoryBlock)
+	return c
 }
 
-func (arc *ARCache) replace() *cacheEntry {
+func (c *ARCache) replace() *cacheEntry {
 	var cdb *cacheDirectoryBlock
-	if arc.t1.Len() >= max(1, arc.target_t1) {
-		cdb = arc.t1.RemoveLRU()
+	if c.t1.Len() >= max(1, c.target_t1) {
+		cdb = c.t1.RemoveLRU()
 		cdb.where = in_b1
-		arc.b1.InsertMRU(cdb)
+		c.b1.InsertMRU(cdb)
 	} else {
-		cdb = arc.t2.RemoveLRU()
+		cdb = c.t2.RemoveLRU()
 		cdb.where = in_b2
-		arc.b2.InsertMRU(cdb)
+		c.b2.InsertMRU(cdb)
 	}
 	if cdb == nil || cdb.pointer == nil {
 		panic("cdb is nil or cdb.pointer is nil")
@@ -59,79 +67,86 @@ func (arc *ARCache) replace() *cacheEntry {
 	return p
 }
 
-func (arc *ARCache) Get(key string) (object CacheObject, err error) {
-	tmp, err := arc.get(key)
+func (c *ARCache) Get(key string) (object CacheObject, err error) {
+	start := time.Now()
+	tmp, err := c.get(key)
+	t := time.Since(start)
+	c.Total += t.Nanoseconds()
+	c.Count += 1
 	if err == CacheMiss {
 		var err1 error
-		object, err1 = arc.fetchFunc(key)
-		arc.setObject(tmp.pointer, object)
+		object, err1 = c.fetchFunc(key)
+		c.setObject(tmp.pointer, object)
 		if err1 != nil {
 			err = err1
 		}
 	} else {
 		object = tmp.pointer.object
 	}
+
 	return
 }
 
-func (arc *ARCache) Set(key string, object CacheObject) {
-	tmp, _ := arc.get(key)
-	arc.setObject(tmp.pointer, object)
+func (c *ARCache) Set(key string, object CacheObject) {
+	tmp, _ := c.get(key)
+	c.setObject(tmp.pointer, object)
 }
 
 //get a CDB by a key
 //in case of CacheMiss, the object stores in the cache entry is no longer valid
-func (arc *ARCache) get(key string) (*cacheDirectoryBlock, error) {
-	tmp := arc.cdbHash[key]
+func (c *ARCache) get(key string) (*cacheDirectoryBlock, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	tmp := c.cdbHash[key]
 	var err error
 	if tmp != nil {
 		if tmp.where == in_t1 || tmp.where == in_t2 {
 			if tmp.where == in_t1 {
-				arc.t1.RemoveIt(tmp)
-				arc.t2.InsertMRU(tmp)
+				c.t1.RemoveIt(tmp)
+				c.t2.InsertMRU(tmp)
 				tmp.where = in_t2
 			} else {
-				arc.t2.SetMRU(tmp)
+				c.t2.SetMRU(tmp)
 			}
 		} else { //in b1 or b2
 			if tmp.where == in_b1 {
-				arc.target_t1 = min(arc.target_t1 + max(arc.b2.Len()/arc.b1.Len(), 1), arc.size)
-				arc.b1.RemoveIt(tmp)
+				c.target_t1 = min(c.target_t1 + max(c.b2.Len()/c.b1.Len(), 1), c.size)
+				c.b1.RemoveIt(tmp)
 			} else {
-				arc.target_t1 = max(arc.target_t1 - max(arc.b1.Len()/arc.b2.Len(), 1), 0)
-				arc.b2.RemoveIt(tmp)
+				c.target_t1 = max(c.target_t1 - max(c.b1.Len()/c.b2.Len(), 1), 0)
+				c.b2.RemoveIt(tmp)
 			}
-			tmp.pointer = arc.replace()
+			tmp.pointer = c.replace()
 			tmp.where = in_t2
-			arc.t2.InsertMRU(tmp)
+			c.t2.InsertMRU(tmp)
 			err = CacheMiss
 		}
 	} else {
-		if arc.t1.Len() + arc.b1.Len() == arc.size {
-			if arc.t1.Len() < arc.size {
-				tmp = arc.b1.RemoveLRU()
-				tmp.pointer = arc.replace()
+		if c.t1.Len() + c.b1.Len() == c.size {
+			if c.t1.Len() < c.size {
+				tmp = c.b1.RemoveLRU()
+				tmp.pointer = c.replace()
 			} else {
-				tmp = arc.t1.RemoveLRU()
+				tmp = c.t1.RemoveLRU()
 			}
-		} else if arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len() >= arc.size {
-			if arc.t1.Len() + arc.t2.Len() + arc.b1.Len() + arc.b2.Len() == arc.size * 2 {
-				tmp = arc.b2.RemoveLRU()
+		} else if c.t1.Len() + c.t2.Len() + c.b1.Len() + c.b2.Len() >= c.size {
+			if c.t1.Len() + c.t2.Len() + c.b1.Len() + c.b2.Len() == c.size * 2 {
+				tmp = c.b2.RemoveLRU()
 			} else {
 				tmp = newCacheDirectorBlock()
 			}
-			tmp.pointer = arc.replace()
+			tmp.pointer = c.replace()
 		} else {
 			tmp = newCacheDirectorBlock()
 			tmp.pointer = newCacheEntry()
 		}
 		if len(tmp.key) > 0 {
-			delete(arc.cdbHash, tmp.key)
+			delete(c.cdbHash, tmp.key)
 		}
 		tmp.key = key
 		tmp.where = in_t1
-		arc.t1.InsertMRU(tmp)
-		arc.cdbHash[key] = tmp
+		c.t1.InsertMRU(tmp)
+		c.cdbHash[key] = tmp
 		err = CacheMiss
 	}
 	if tmp.pointer == nil {
@@ -140,17 +155,17 @@ func (arc *ARCache) get(key string) (*cacheDirectoryBlock, error) {
 	return tmp, err
 }
 
-func (arc *ARCache) SetFetchFunc(f CacheFetchFunc) {
-	arc.fetchFunc = f
+func (c *ARCache) SetFetchFunc(f CacheFetchFunc) {
+	c.fetchFunc = f
 }
 
-func (arc *ARCache) SetCleanFunc(f CacheCleanFunc) {
-	arc.cleanFunc = f
+func (c *ARCache) SetCleanFunc(f CacheCleanFunc) {
+	c.cleanFunc = f
 }
 
-func (arc *ARCache) GetAllObjects() map[string]CacheObject {
+func (c *ARCache) GetAllObjects() map[string]CacheObject {
 	all := make(map[string]CacheObject)
-	for key, cdb := range(arc.cdbHash) {
+	for key, cdb := range(c.cdbHash) {
 		if cdb.where == in_t1 || cdb.where == in_t2 {
 			all[key] = cdb.pointer.object
 		}
@@ -158,28 +173,28 @@ func (arc *ARCache) GetAllObjects() map[string]CacheObject {
 	return all
 }
 
-func (arc *ARCache) clearObject(entry *cacheEntry) {
-	arc.setObject(entry, nil)
+func (c *ARCache) clearObject(entry *cacheEntry) {
+	c.setObject(entry, nil)
 }
 
-func (arc *ARCache) setObject(entry *cacheEntry, obj CacheObject) {
+func (c *ARCache) setObject(entry *cacheEntry, obj CacheObject) {
 	if entry != nil {
-		if entry.object != nil && arc.cleanFunc != nil {
-			arc.cleanFunc(entry.object)
+		if entry.object != nil && c.cleanFunc != nil {
+			c.cleanFunc(entry.object)
 		}
 		entry.object = obj
 	}
 }
 
-func (arc *ARCache) fetch(key string) (CacheObject, error) {
-	if arc.fetchFunc == nil {
+func (c *ARCache) fetch(key string) (CacheObject, error) {
+	if c.fetchFunc == nil {
 		return nil, CacheMiss
 	}
-	return arc.fetchFunc(key)
+	return c.fetchFunc(key)
 }
 
-func (arc *ARCache) CheckCache() {
-	for key, cdb := range(arc.cdbHash) {
+func (c *ARCache) CheckCache() {
+	for key, cdb := range(c.cdbHash) {
 		if cdb.key != key {
 			panic("keys don't match")
 		}
