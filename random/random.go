@@ -42,7 +42,7 @@ func (c *RRCache) get(key string) (base.CacheDirectoryBlock, error) {
 			tmp = c.cdbl.Select()
 		} else {
 			tmp = newCacheDirectorBlock()
-			tmp.SetEntry(base.NewCacheEntry())
+			tmp.SetEntry(c.NewCacheEntryFunc())
 			c.cdbl.Add(tmp)
 		}
 		if len(tmp.GetKey()) > 0 {
@@ -57,6 +57,9 @@ func (c *RRCache) get(key string) (base.CacheDirectoryBlock, error) {
 	c.Accesses += 1
 	if tmp.IsEntryNil() {
 		panic("cannot be nil")
+	}
+	if err == CacheMiss {
+		tmp.GetEntry().SetDirty()
 	}
 	return tmp, err
 }

@@ -7,7 +7,6 @@ import . "go-cache"
 func (c *LRUCache) Get(key string) (object CacheObject, err error) {
 	tmp, err := c.get(key)
 	entry := tmp.GetEntry()
-	c.Accesses += 1
 	if err == CacheMiss {
 		var err1 error
 		object, err1 = c.FetchFunc(key)
@@ -16,7 +15,6 @@ func (c *LRUCache) Get(key string) (object CacheObject, err error) {
 			err = err1
 		}
 	} else {
-		c.Hits += 1
 		object = entry.GetObject()
 	}
 	return

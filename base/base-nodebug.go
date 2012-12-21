@@ -23,4 +23,10 @@ type BaseCache struct {
 
 	isGoroutineSafe bool
 	mutex sync.Mutex
+
+	NewCacheEntryFunc func()*CacheEntry 
+}
+
+func (c *BaseCache) PrintStats() {
+	println("cache hit rate:", c.GetHitRate())
 }

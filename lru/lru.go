@@ -45,7 +45,7 @@ func (c *LRUCache) get(key string) (base.CacheDirectoryBlock, error) {
 			tmp = c.cdbl.RemoveLRU()
 		} else {
 			tmp = newCacheDirectorBlock()
-			tmp.SetEntry(base.NewCacheEntry())
+			tmp.SetEntry(c.NewCacheEntryFunc())
 		}
 		if len(tmp.GetKey()) > 0 {
 			delete(c.CdbHash, tmp.GetKey())
@@ -58,6 +58,9 @@ func (c *LRUCache) get(key string) (base.CacheDirectoryBlock, error) {
 	c.Accesses += 1
 	if tmp.IsEntryNil() {
 		panic("cannot be nil")
+	}
+	if err == CacheMiss {
+		tmp.GetEntry().SetDirty()
 	}
 	return tmp, err
 }

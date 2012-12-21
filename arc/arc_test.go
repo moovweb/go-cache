@@ -14,10 +14,6 @@ func (o *StringObject) Size() int {
 	return len(o.s)
 }
 
-func PrintStats(c *ARCache) {
-	println("cache hit rate:", c.GetHitRate())
-}
-
 func TestGet(t *testing.T) {
 	cacheSize := 100
 	countAdded := 0
@@ -67,5 +63,5 @@ func TestGet(t *testing.T) {
 			t.Errorf("key does not match the cached value")
 		}
 	}
-	PrintStats(c)
+	c.PrintStats()
 }

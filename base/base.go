@@ -7,6 +7,7 @@ func NewBaseCache(size int) *BaseCache {
 	cache.Size = size
 	cache.CdbHash = make(map[string]CacheDirectoryBlock)
 	cache.isGoroutineSafe = false
+	cache.NewCacheEntryFunc = NewCacheEntry
 	return cache
 }
 
@@ -15,6 +16,7 @@ func NewSafeBaseCache(size int) *BaseCache {
 	cache.Size = size
 	cache.CdbHash = make(map[string]CacheDirectoryBlock)
 	cache.isGoroutineSafe = true
+	cache.NewCacheEntryFunc = NewSafeCacheEntry
 	return cache
 }
 

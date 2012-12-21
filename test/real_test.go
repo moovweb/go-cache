@@ -21,7 +21,7 @@ func TestARC(t *testing.T) {
 	countCleaned := 0
 	countAdded := 0
 
-	c := arc.NewArcCache(cacheSize)
+	c := arc.NewSafeArcCache(cacheSize)
 	data, err := ioutil.ReadFile("list.txt")
 	if err != nil {
 		t.Errorf("err: %s\n", err)
@@ -46,8 +46,6 @@ func TestARC(t *testing.T) {
 			countMiss += 1
 		}
 	}
-	println("cache hit rate:", c.GetHitRate())
-	//println("avg get time:", c.Total/c.Count)
 
 	c.CheckCache()
 
@@ -60,6 +58,7 @@ func TestARC(t *testing.T) {
 			t.Errorf("key does not match the cached value")
 		}
 	}
+	c.PrintStats()
 }
 
 func TestLRU(t *testing.T) {
@@ -67,7 +66,7 @@ func TestLRU(t *testing.T) {
 	countCleaned := 0
 	countAdded := 0
 
-	c := lru.NewLRUCache(cacheSize)
+	c := lru.NewSafeLRUCache(cacheSize)
 	data, err := ioutil.ReadFile("list.txt")
 	if err != nil {
 		t.Errorf("err: %s\n", err)
@@ -90,8 +89,6 @@ func TestLRU(t *testing.T) {
 		c.Get(lines[i])
 		count += 1
 	}
-	println("cache hit rate:", c.GetHitRate())
-	//println("avg get time:", c.Total/c.Count)
 
 	c.CheckCache()
 
@@ -104,6 +101,7 @@ func TestLRU(t *testing.T) {
 			t.Errorf("key does not match the cached value")
 		}
 	}
+	c.PrintStats()
 }
 
 func TestRRC(t *testing.T) {
@@ -111,7 +109,7 @@ func TestRRC(t *testing.T) {
 	countCleaned := 0
 	countAdded := 0
 
-	c := rrc.NewRRCache(cacheSize)
+	c := rrc.NewSafeRRCache(cacheSize)
 	data, err := ioutil.ReadFile("list.txt")
 	if err != nil {
 		t.Errorf("err: %s\n", err)
@@ -133,8 +131,6 @@ func TestRRC(t *testing.T) {
 	for i := 0; i < countAccess; i ++ {
 		c.Get(lines[i])
 	}
-	println("cache hit rate:", c.GetHitRate())
-	//println("avg get time:", c.Total/c.Count)
 
 	c.CheckCache()
 
@@ -147,4 +143,5 @@ func TestRRC(t *testing.T) {
 			t.Errorf("key does not match the cached value")
 		}
 	}
+	c.PrintStats()
 }

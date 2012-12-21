@@ -24,6 +24,8 @@ type BaseCache struct {
 	isGoroutineSafe bool
 	mutex sync.Mutex
 
+	NewCacheEntryFunc func()*CacheEntry 
+
 	AccessTime int64
 }
 
@@ -38,4 +40,9 @@ func (c *BaseCache) GetAvgAccessTime() int64 {
 		return 0
 	}
 	return c.AccessTime/c.Accesses
+}
+
+func (c *BaseCache) PrintStats() {
+	println("cache hit rate:", c.GetHitRate())
+	println("cache avg access time:", c.GetAvgAccessTime())
 }

@@ -67,5 +67,5 @@ func TestGet(t *testing.T) {
 			t.Errorf("key does not match the cached value")
 		}
 	}
-	PrintStats(c)
+	c.PrintStats()
 }

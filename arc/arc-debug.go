@@ -1,17 +1,16 @@
 // +build cache_debug
 
-package lru
+package arc
 
 import . "go-cache"
 import "time"
 
-func (c *LRUCache) Get(key string) (object CacheObject, err error) {
+func (c *ARCache) Get(key string) (object CacheObject, err error) {
 	start := time.Now()
 	tmp, err := c.get(key)
 	entry := tmp.GetEntry()
 	t := time.Since(start)
 	c.AddAccessTime(t.Nanoseconds())
-
 	if err == CacheMiss {
 		var err1 error
 		object, err1 = c.FetchFunc(key)
@@ -22,5 +21,6 @@ func (c *LRUCache) Get(key string) (object CacheObject, err error) {
 	} else {
 		object = entry.GetObject()
 	}
+
 	return
 }
