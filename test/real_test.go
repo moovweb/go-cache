@@ -7,6 +7,7 @@ import "go-cache/lru"
 import "go-cache/random"
 import "strings"
 import "io/ioutil"
+import "sync"
 
 type StringObject struct {
 	s string
@@ -17,6 +18,7 @@ func (o *StringObject) Size() int {
 }
 
 const cacheSize = 20
+const concurrency = 20
 
 func TestARC(t *testing.T) {
 	countCleaned := 0
@@ -39,15 +41,18 @@ func TestARC(t *testing.T) {
 		return &StringObject{s:key}, nil
 	})
 
-	countMiss := 0
 	countAccess := len(lines)
-	for i := 0; i < countAccess; i ++ {
-		_, err := c.Get(lines[i])
-		if err == cache.CacheMiss {
-			countMiss += 1
-		}
+	wg := &sync.WaitGroup{}
+	for j := 0; j < concurrency; j++ {
+		wg.Add(1)
+		go func() {
+			for i := 0; i < countAccess; i ++ {
+				c.Get(lines[i])
+			}
+			wg.Done()
+		}()
 	}
-
+	wg.Wait()
 	c.CheckCache()
 
 	if countCleaned + cacheSize != countAdded {
@@ -84,11 +89,17 @@ func TestLRU(t *testing.T) {
 	})
 
 	countAccess := len(lines)
-	count := 0
-	for i := 0; i < countAccess; i ++ {
-		c.Get(lines[i])
-		count += 1
+	wg := &sync.WaitGroup{}
+	for j := 0; j < concurrency; j++ {
+		wg.Add(1)
+		go func() {
+			for i := 0; i < countAccess; i ++ {
+				c.Get(lines[i])
+			}
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 
 	c.CheckCache()
 
@@ -126,10 +137,17 @@ func TestRRC(t *testing.T) {
 	})
 
 	countAccess := len(lines)
-
-	for i := 0; i < countAccess; i ++ {
-		c.Get(lines[i])
+	wg := &sync.WaitGroup{}
+	for j := 0; j < concurrency; j++ {
+		wg.Add(1)
+		go func() {
+			for i := 0; i < countAccess; i ++ {
+				c.Get(lines[i])
+			}
+			wg.Done()
+		}()
 	}
+	wg.Wait()
 
 	c.CheckCache()
 

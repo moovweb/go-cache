@@ -88,6 +88,7 @@ func (c *ARCache) get(key string) (base.CacheDirectoryBlock, error) {
 				c.b2.RemoveIt(tmp)
 			}
 			tmp.SetEntry(c.replace())
+			tmp.SetKey(key)
 			tmp.(*ArcCdb).where = in_t2
 			c.t2.InsertMRU(tmp)
 			err = CacheMiss
@@ -133,7 +134,7 @@ func (c *ARCache) get(key string) (base.CacheDirectoryBlock, error) {
 func (c *ARCache) CheckCache() {
 	for key, cdb := range(c.CdbHash) {
 		if cdb.GetKey() != key {
-			panic("keys don't match")
+			panic("keys don't match " + cdb.GetKey() + "!=" + key)
 		}
 		if (cdb.(*ArcCdb).where == in_b1 || cdb.(*ArcCdb).where == in_b2) && !cdb.IsEntryNil() {
 			panic("cdb pointer should be nil")

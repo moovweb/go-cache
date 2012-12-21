@@ -20,3 +20,4 @@ type Cache interface {
 }
 
 var CacheMiss = errors.New("miss")
+var EmptyKey = errors.New("empty key")

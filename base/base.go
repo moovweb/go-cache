@@ -67,6 +67,23 @@ func (c *BaseCache) Unlock() {
 	}
 }
 
+func (c *BaseCache) GetOrFetch(key string, cdb CacheDirectoryBlock, err error) (CacheObject, error) {
+	entry := cdb.GetEntry()
+	if err == nil {
+		object := entry.GetObject()
+		return object, nil
+	} else if err == CacheMiss {
+		object, err1 := c.FetchFunc(key)
+		if err1 == nil {
+			entry.SetObject(object, c.CleanFunc)
+			return object, err
+		}
+		entry.SetObject(nil, c.CleanFunc) //clear the object in case of error b/c the object is not valid
+		return nil, err1
+	}
+	return nil, err
+}
+
 func (c *BaseCache) CheckCache() {
 	for key, cdb := range(c.CdbHash) {
 		if cdb.GetKey() != key {

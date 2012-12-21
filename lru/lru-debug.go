@@ -6,21 +6,12 @@ import . "go-cache"
 import "time"
 
 func (c *LRUCache) Get(key string) (object CacheObject, err error) {
+	if len(key) == 0 {
+		return nil, EmptyKey
+	}
 	start := time.Now()
-	tmp, err := c.get(key)
-	entry := tmp.GetEntry()
+	cdb, err := c.get(key)
 	t := time.Since(start)
 	c.AddAccessTime(t.Nanoseconds())
-
-	if err == CacheMiss {
-		var err1 error
-		object, err1 = c.FetchFunc(key)
-		entry.SetObject(object, c.CleanFunc)
-		if err1 != nil {
-			err = err1
-		}
-	} else {
-		object = entry.GetObject()
-	}
-	return
+	return c.GetOrFetch(key, cdb, err)
 }
