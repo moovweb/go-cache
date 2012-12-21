@@ -42,6 +42,7 @@ func TestARC(t *testing.T) {
 	})
 
 	countAccess := len(lines)
+	countAccess = 2000
 	wg := &sync.WaitGroup{}
 	for j := 0; j < concurrency; j++ {
 		wg.Add(1)
@@ -89,6 +90,7 @@ func TestLRU(t *testing.T) {
 	})
 
 	countAccess := len(lines)
+	countAccess = 2000
 	wg := &sync.WaitGroup{}
 	for j := 0; j < concurrency; j++ {
 		wg.Add(1)
@@ -137,6 +139,7 @@ func TestRRC(t *testing.T) {
 	})
 
 	countAccess := len(lines)
+	countAccess = 2000
 	wg := &sync.WaitGroup{}
 	for j := 0; j < concurrency; j++ {
 		wg.Add(1)
