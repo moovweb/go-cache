@@ -16,8 +16,9 @@ func (o *StringObject) Size() int {
 	return len(o.s)
 }
 
+const cacheSize = 20
+
 func TestARC(t *testing.T) {
-	cacheSize := 30
 	countCleaned := 0
 	countAdded := 0
 
@@ -62,7 +63,6 @@ func TestARC(t *testing.T) {
 }
 
 func TestLRU(t *testing.T) {
-	cacheSize := 30
 	countCleaned := 0
 	countAdded := 0
 
@@ -105,7 +105,6 @@ func TestLRU(t *testing.T) {
 }
 
 func TestRRC(t *testing.T) {
-	cacheSize := 30
 	countCleaned := 0
 	countAdded := 0
 
