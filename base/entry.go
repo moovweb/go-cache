@@ -9,6 +9,7 @@ type CacheEntry struct {
 	mutex sync.Mutex
 	cond *sync.Cond
 	isGoroutineSafe bool
+	waits int
 }
 
 func NewCacheEntry() *CacheEntry {
@@ -32,7 +33,9 @@ func (entry *CacheEntry) GetObject() CacheObject {
 		entry.mutex.Lock()
 		defer entry.mutex.Unlock()
 		for(entry.dirty) {
+			entry.waits += 1
 			entry.cond.Wait()
+			entry.waits -= 1
 		}
 	}
 	return entry.object
@@ -49,7 +52,9 @@ func (entry *CacheEntry) SetObject(obj CacheObject, f CacheCleanFunc) {
 	entry.object = obj
 	entry.dirty = false
 	if entry.isGoroutineSafe {
-		entry.cond.Signal()
+		for i := entry.waits; i > 0; i-- {
+			entry.cond.Signal()
+		}
 	}
 }
 
