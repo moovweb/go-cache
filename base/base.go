@@ -1,58 +1,82 @@
 package base
 
 import . "go-cache"
+import "sync"
 
-func NewBaseCache(size int) *BaseCache {
+type BaseCache struct {
+	//the limit of the total size of cached objects
+	size int
+
+	//this is called on the object evicted from the cache
+	CleanFunc CacheCleanFunc
+
+	//stats info
+	//total number of accesses
+	accesses int64
+	//total number of hits
+	hits int64
+
+	//is this cache safe for multi-goroutines
+	isGoroutineSafe bool
+	//the mutex to make it goroutine safe
+	mutex sync.Mutex
+
+	//CacheDirectoryBlock Manager
+	CdbManager
+}
+
+func NewBaseCache(size int, cdbm CdbManager) *BaseCache {
 	cache := &BaseCache{}
-	cache.Size = size
-	cache.CdbHash = make(map[string]CacheDirectoryBlock)
+	cache.size = size
 	cache.isGoroutineSafe = false
-	cache.NewCacheEntryFunc = NewCacheEntry
+	cache.CdbManager = cdbm
 	return cache
 }
 
-func NewSafeBaseCache(size int) *BaseCache {
+func NewSafeBaseCache(size int, cdbm CdbManager) *BaseCache {
 	cache := &BaseCache{}
-	cache.Size = size
-	cache.CdbHash = make(map[string]CacheDirectoryBlock)
+	cache.size = size
 	cache.isGoroutineSafe = true
-	cache.NewCacheEntryFunc = NewSafeCacheEntry
+	cache.CdbManager = cdbm
 	return cache
-}
-
-func (c *BaseCache) SetFetchFunc(f CacheFetchFunc) {
-	c.FetchFunc = f
 }
 
 func (c *BaseCache) SetCleanFunc(f CacheCleanFunc) {
 	c.CleanFunc = f
 }
 
-func (c *BaseCache) GetAllObjects() map[string]CacheObject {
-	all := make(map[string]CacheObject)
-	for key, cdb := range(c.CdbHash) {
-		if cdb.IsEntryCached() {
-			entry := cdb.GetEntry()
-			all[key] = entry.GetObject()
-		}
+func (c *BaseCache) Get(key string) (object CacheObject, err error) {
+	if len(key) == 0 {
+		return nil, EmptyKey
 	}
-	return all
+	c.Lock()
+	defer c.Unlock()
+	c.accesses += 1
+	cdb, err := c.CdbManager.Find(key)
+	if err != nil {
+		return nil, err
+	}
+	c.hits += 1
+	return cdb.GetObject(), nil
 }
 
-func (c *BaseCache) Fetch(key string) (CacheObject, error) {
-	if c.FetchFunc == nil {
-		return nil, CacheMiss
+
+func (c *BaseCache) Set(key string, object CacheObject) error {
+	if len(key) == 0 {
+		return EmptyKey
 	}
-	return c.FetchFunc(key)
+	c.Lock()
+	defer c.Unlock()
+	return c.CdbManager.Replace(key, object, c.size, c.CleanFunc)
 }
 
 func (c *BaseCache) GetHitRate() int {
 	c.Lock()
 	defer c.Unlock()
-	if c.Accesses <= 0 {
+	if c.accesses <= 0 {
 		return 0
 	}
-	return int(c.Hits*100/c.Accesses)
+	return int(c.hits*100/c.accesses)
 }
 
 func (c *BaseCache) Lock() {
@@ -67,27 +91,6 @@ func (c *BaseCache) Unlock() {
 	}
 }
 
-func (c *BaseCache) GetOrFetch(key string, cdb CacheDirectoryBlock, err error) (CacheObject, error) {
-	entry := cdb.GetEntry()
-	if err == nil {
-		object := entry.GetObject()
-		return object, nil
-	} else if err == CacheMiss {
-		object, err1 := c.FetchFunc(key)
-		if err1 == nil {
-			entry.SetObject(object, c.CleanFunc)
-			return object, err
-		}
-		entry.SetObject(nil, c.CleanFunc) //clear the object in case of error b/c the object is not valid
-		return nil, err1
-	}
-	return nil, err
-}
-
-func (c *BaseCache) CheckCache() {
-	for key, cdb := range(c.CdbHash) {
-		if cdb.GetKey() != key {
-			panic("keys don't match")
-		}
-	}
+func (c *BaseCache) PrintStats() {
+	println("cache hit rate:", c.GetHitRate())
 }

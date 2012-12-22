@@ -11,7 +11,7 @@ type StringObject struct {
 }
 
 func (o *StringObject) Size() int {
-	return len(o.s)
+	return 1
 }
 
 func TestGet(t *testing.T) {
@@ -24,41 +24,30 @@ func TestGet(t *testing.T) {
 
 	c.SetCleanFunc(func (obj cache.CacheObject) error {
 		countCleaned += 1
-		//println("replacing", obj.(string))
+		println("replacing", obj.(*StringObject).s)
 		return nil
-	})
-	c.SetFetchFunc(func (key string) (cache.CacheObject, error) {
-		countAdded += 1
-		return &StringObject{s:key}, nil
 	})
 	rand.Seed(time.Now().Unix())
 
 	for i := 0; i < countAccess; i ++ {
 		j := rand.Intn(cacheSize*2)
-		val, err := c.Get("key"+strconv.Itoa(j))
-		if err != cache.CacheMiss && err != nil {
-			t.Errorf("unexpected err:", err.Error())
-		}
-		if val == nil || val.(*StringObject).s != "key"+strconv.Itoa(j) {
+		key := "key"+strconv.Itoa(j)
+		val, err := c.Get(key)
+		if err == cache.CacheMiss {
+			countAdded += 1
+			c.Set(key, &StringObject{s: key})
+		} else if val.(*StringObject).s != key {
 			t.Errorf("key does not match the value")
 		}
 	}
 
-	for i := 0; i < countAccess; i ++ {
-		j := rand.Intn(cacheSize*2)
-		val, _ := c.Get("key"+strconv.Itoa(j))
-		if val == nil || val.(*StringObject).s != "key"+strconv.Itoa(j) {
-			t.Errorf("key does not match the value")
-		}
-	}
-
-	c.CheckCache()
+	c.Check()
 
 	if countCleaned + cacheSize != countAdded {
 		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, cacheSize)
 	}
 	
-	for key, obj := range(c.GetAllObjects()) {
+	for key, obj := range(c.Collect()) {
 		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}

@@ -6,18 +6,15 @@ type CacheObject interface {
 	Size() int
 }
 
-type CacheFetchFunc func(string) (CacheObject, error)
 type CacheCleanFunc func(CacheObject) error
 
 type Cache interface {
 	Set(string, CacheObject)
 	Get(string) (CacheObject, error)
-	GetAllObjects() map[string]CacheObject
-	SetFetchFunc(CacheFetchFunc)
+	Collect() map[string]CacheObject
 	SetCleanFunc(CacheCleanFunc)
-	GetHitRate() int
-	Resize(size int)
 }
 
 var CacheMiss = errors.New("miss")
 var EmptyKey = errors.New("empty key")
+var ObjectTooBig = errors.New("object too big to fit in the cache")
