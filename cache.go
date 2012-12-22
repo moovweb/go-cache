@@ -9,10 +9,13 @@ type CacheObject interface {
 type CacheCleanFunc func(CacheObject) error
 
 type Cache interface {
-	Set(string, CacheObject)
+	Set(string, CacheObject) error
 	Get(string) (CacheObject, error)
+	Check()
 	Collect() map[string]CacheObject
 	SetCleanFunc(CacheCleanFunc)
+	GetHitRate() int
+	GetUsage() int
 }
 
 var CacheMiss = errors.New("miss")

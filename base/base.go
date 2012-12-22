@@ -90,7 +90,3 @@ func (c *BaseCache) Unlock() {
 		c.mutex.Unlock()
 	}
 }
-
-func (c *BaseCache) PrintStats() {
-	println("cache hit rate:", c.GetHitRate())
-}

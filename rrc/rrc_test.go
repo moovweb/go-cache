@@ -11,20 +11,20 @@ type StringObject struct {
 }
 
 func (o *StringObject) Size() int {
-	return 1
+	return len(o.s)
 }
 
 func TestGet(t *testing.T) {
-	cacheSize := 100
+	cacheSize := 20
 	countAdded := 0
 	countCleaned := 0
-	countAccess := 2000
+	countAccess := 1000
+	countMiss := 0
 
-	c := NewSafeRRCache(cacheSize)
+	c := NewSafeRRCache(cacheSize*5)
 
 	c.SetCleanFunc(func (obj cache.CacheObject) error {
-		countCleaned += 1
-		println("replacing", obj.(*StringObject).s)
+		countCleaned += obj.Size()
 		return nil
 	})
 	rand.Seed(time.Now().Unix())
@@ -33,17 +33,18 @@ func TestGet(t *testing.T) {
 		j := rand.Intn(cacheSize*2)
 		key := "key"+strconv.Itoa(j)
 		val, err := c.Get(key)
+
 		if err == cache.CacheMiss {
-			countAdded += 1
+			countAdded += len(key)
 			c.Set(key, &StringObject{s: key})
+			countMiss += 1
 		} else if val.(*StringObject).s != key {
 			t.Errorf("key does not match the value")
 		}
 	}
 
 	c.Check()
-
-	if countCleaned + cacheSize != countAdded {
+	if countCleaned + c.GetUsage() != countAdded {
 		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, cacheSize)
 	}
 	
@@ -52,5 +53,5 @@ func TestGet(t *testing.T) {
 			t.Errorf("key does not match the cached value")
 		}
 	}
-	c.PrintStats()
+	println("cache hit rate:", c.GetHitRate())
 }

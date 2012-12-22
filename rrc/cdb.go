@@ -56,7 +56,6 @@ func (cdbm *BasicCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (b
 		evObject := repl.GetObject()
 		cdbm.size -= evObject.Size()
 		f(evObject)
-		println("evict")
 		delete(cdbm.hash, repl.GetKey())
 	}
 	return repl, nil
@@ -66,7 +65,6 @@ func (cdbm *BasicCdbm) Replace(key string, object CacheObject, sizeLimit int, f 
 	cdb, ok := cdbm.hash[key]
 	if !ok {
 		oSize := object.Size()
-		println("oSize:", oSize, "size:", )
 		repl, err := cdbm.MakeSpace(oSize, sizeLimit, f)
 		if err != nil {
 			return err
@@ -74,7 +72,6 @@ func (cdbm *BasicCdbm) Replace(key string, object CacheObject, sizeLimit int, f 
 		
 		if repl == nil {
 			cdb = newCacheDirectorBlock()
-			println("create new")
 		} else {
 			cdb = repl
 		}
@@ -100,5 +97,9 @@ func (cdbm *BasicCdbm) Check() {
 			panic("keys don't match")
 		}
 	}
+}
+
+func (cdbm *BasicCdbm) GetUsage() int {
+	return cdbm.size
 }
 

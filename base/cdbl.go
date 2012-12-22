@@ -7,4 +7,5 @@ type CdbManager interface {
 	Replace(string, CacheObject, int, CacheCleanFunc) error
 	Collect() map[string]CacheObject
 	Check()
+	GetUsage() int
 }
