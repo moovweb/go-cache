@@ -1,4 +1,4 @@
-package rrc
+package base
 
 import "testing"
 import "go-cache"
@@ -21,7 +21,9 @@ func TestGet(t *testing.T) {
 	countAccess := 1000
 	countMiss := 0
 
-	c := NewSafeRRCache(cacheSize*5)
+	cdbm := NewBasicCdbm()
+
+	c := NewSafeBaseCache(cacheSize*5, cdbm)
 
 	c.SetCleanFunc(func (obj cache.CacheObject) error {
 		countCleaned += obj.Size()

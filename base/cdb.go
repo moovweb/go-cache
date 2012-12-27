@@ -29,3 +29,8 @@ func (cdb *BaseCdb) SetObject(object CacheObject) {
 func (cdb *BaseCdb) GetObject() CacheObject {
 	return cdb.object
 }
+
+func NewBasicCdb() *BaseCdb {
+	cdb := &BaseCdb{}
+	return cdb
+}
