@@ -29,6 +29,7 @@ type ArcCdb struct {
 	where int
 	base.BaseCdb
 	size int
+	v string
 }
 
 func newCacheDirectorBlock() *ArcCdb {
@@ -67,21 +68,26 @@ func (cdbm *ArcCdbm) Find(key string) (base.CacheDirectoryBlock, error) {
 func (cdbm *ArcCdbm) Remove(key string, f CacheCleanFunc) int {
 	cdb, ok := cdbm.Hash[key]
 	if ok {
-		object := cdb.GetObject()
-		oSize := object.Size()
 		acdb := cdb.(*ArcCdb)
 		where := acdb.where
-		cdbm.Size -= oSize
-		if f != nil {
-			f(object)
-		}
+
 		if where == in_t1 {
+			object := cdb.GetObject()
 			cdbm.t1.Remove(acdb.element)
+			cdbm.Size -= object.Size()
+			if f != nil {
+				f(object)
+			}
 		} else if  where == in_b1 {
 			cdbm.target_t1 = min(cdbm.target_t1 + max(cdbm.b2.size/cdbm.b1.size, 1), cdbm.Size)
 			cdbm.b1.Remove(acdb.element)
 		} else  if where == in_t2 {
+			object := cdb.GetObject()
 			cdbm.t2.Remove(acdb.element)
+			cdbm.Size -= object.Size()
+			if f != nil {
+				f(object)
+			}
 		} else if where == in_b2 {
 			cdbm.target_t1 = max(cdbm.target_t1 - max(cdbm.b1.size/cdbm.b2.size, 1), 0)
 			cdbm.b2.Remove(acdb.element)
@@ -96,18 +102,21 @@ func (cdbm *ArcCdbm) evict(f CacheCleanFunc) {
 	var cdb base.CacheDirectoryBlock
 	if cdbm.t1.size >= max(1, cdbm.target_t1) {
 		cdb = cdbm.t1.RemoveLRU()
-		cdb.(*ArcCdb).where = in_b1
-		cdb.(*ArcCdb).element = cdbm.b1.PushBack(cdb)
+		acdb := cdb.(*ArcCdb)
+		acdb.where = in_b1
+		acdb.element = cdbm.b1.PushBack(acdb)
 	} else {
 		cdb = cdbm.t2.RemoveLRU()
-		cdb.(*ArcCdb).where = in_b2
-		cdb.(*ArcCdb).element = cdbm.b1.PushBack(cdb)
+		acdb := cdb.(*ArcCdb)
+		acdb.where = in_b2
+		acdb.element = cdbm.b2.PushBack(acdb)
 	}
 	object := cdb.GetObject()
 	cdbm.Size -= object.Size()
 	if f != nil {
 		f(object)
 	}
+	cdb.SetObject(nil)
 	return
 }
 
@@ -116,23 +125,25 @@ func (cdbm *ArcCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (bas
 		return nil, ObjectTooBig
 	}
 	
-	//there is nothing 
-	if len(cdbm.Hash) == 0 {
-		return nil, nil
-	}
-
 	var cdb base.CacheDirectoryBlock
 	for avail := sizeLimit - cdbm.Size; objectSize > avail; avail = sizeLimit - cdbm.Size {
-		if cdbm.t1.size + cdbm.b1.size + objectSize <= cdbm.Size {
-			if cdbm.b1.size == 0 {
-				cdb = cdbm.t1.RemoveLRU()
-			} else {
+		if cdbm.t1.size + cdbm.b1.size + objectSize >= cdbm.Size {
+			if cdbm.b1.size > 0 {
 				cdb = cdbm.b1.RemoveLRU()
 				cdbm.evict(f)
+			} else {
+				cdb = cdbm.t1.RemoveLRU()
+				object := cdb.GetObject()
+				cdbm.Size -= object.Size()
+				if f != nil {
+					f(object)
+				}
 			}
+			delete(cdbm.Hash, cdb.GetKey())
 		} else if cdbm.t1.size + cdbm.t2.size + cdbm.b1.size + cdbm.b2.size + objectSize >= cdbm.Size {
 			if cdbm.t1.size + cdbm.t2.size + cdbm.b1.size + cdbm.b2.size + objectSize >= cdbm.Size * 2 {
 				cdb = cdbm.b2.RemoveLRU()
+				delete(cdbm.Hash, cdb.GetKey())
 			} else {
 				cdb = newCacheDirectorBlock()
 			}
@@ -141,7 +152,9 @@ func (cdbm *ArcCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (bas
 			cdb = newCacheDirectorBlock()
 		}
 	}
-	cdb.(*ArcCdb).size = objectSize
+	if cdb == nil {
+		cdb = newCacheDirectorBlock()
+	}
 	return cdb, nil
 }
 
@@ -152,17 +165,18 @@ func (cdbm *ArcCdbm) Replace(key string, object CacheObject, sizeLimit int, f Ca
 	if err != nil {
 		return err
 	}
-	if cdb == nil {
-		cdb = newCacheDirectorBlock()
-	}
+	
 	acdb := cdb.(*ArcCdb)
+	acdb.size = oSize
+	acdb.v = key
 	if where == not_in {
 		acdb.where = in_t1
-		acdb.element = cdbm.t1.PushBack(cdb)
+		acdb.element = cdbm.t1.PushBack(acdb)
 	} else {
 		acdb.where = in_t2
-		acdb.element = cdbm.t2.PushBack(cdb)
+		acdb.element = cdbm.t2.PushBack(acdb)
 	}
+
 	cdb.SetKey(key)
 	cdb.SetObject(object)
 	cdbm.Size += oSize
@@ -183,4 +197,17 @@ func (cdbm *ArcCdbm) Check() {
 			panic("cdb pointer should not be nil")
 		}
 	}
+	if cdbm.GetUsage() > cdbm.Size {
+		panic("Cache usage exceeds the limit")
+	}
+}
+
+func (cdbm *ArcCdbm) Collect() map[string]CacheObject {
+	m := make(map[string]CacheObject)
+	for key, cdb := range(cdbm.Hash) {
+		if cdb.(*ArcCdb).where == in_t1 || cdb.(*ArcCdb).where == in_t2 {
+			m[key] = cdb.GetObject()
+		}
+	}
+	return m
 }

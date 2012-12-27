@@ -39,3 +39,7 @@ func NewCdbList() *CdbList {
 	cl.l = list.New()
 	return cl
 }
+
+func (cl *CdbList) Len() int {
+	return cl.l.Len()
+}

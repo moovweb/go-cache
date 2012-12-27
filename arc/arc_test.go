@@ -18,8 +18,7 @@ func TestGet(t *testing.T) {
 	cacheSize := 20
 	countAdded := 0
 	countCleaned := 0
-	countAccess := 1000
-	countMiss := 0
+	countAccess := 10000
 
 	c := NewARCache(cacheSize*5)
 
@@ -37,15 +36,14 @@ func TestGet(t *testing.T) {
 		if err == cache.CacheMiss {
 			countAdded += len(key)
 			c.Set(key, &StringObject{s: key})
-			countMiss += 1
 		} else if val.(*StringObject).s != key {
-			t.Errorf("key does not match the value")
+			t.Errorf("key does not match the value, %s != %s", val.(*StringObject).s, key)
 		}
 	}
 
 	c.Check()
 	if countCleaned + c.GetUsage() != countAdded {
-		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, cacheSize)
+		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, c.GetUsage())
 	}
 	
 	for key, obj := range(c.Collect()) {
