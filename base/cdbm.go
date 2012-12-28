@@ -107,6 +107,9 @@ func (cdbm *BasicCdbm) Check() {
 			panic("keys don't match")
 		}
 	}
+	if cdbm.GetUsage() > cdbm.Size {
+		panic("Cache usage exceeds the limit")
+	}
 }
 
 func (cdbm *BasicCdbm) GetUsage() int {
