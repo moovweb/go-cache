@@ -79,6 +79,24 @@ func (c *BaseCache) GetHitRate() int {
 	return int(c.hits*100/c.accesses)
 }
 
+func (c *BaseCache) GetUsage() int {
+	c.Lock()
+	defer c.Unlock()
+	return c.CdbManager.GetUsage()
+}
+
+func (c *BaseCache) Check() {
+	c.Lock()
+	defer c.Unlock()
+	c.CdbManager.Check()
+}
+
+func (c *BaseCache) Collect() map[string]CacheObject {
+	c.Lock()
+	defer c.Unlock()
+	return c.CdbManager.Collect()
+}
+
 func (c *BaseCache) Lock() {
 	if c.isGoroutineSafe {
 		c.mutex.Lock()
