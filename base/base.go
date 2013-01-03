@@ -108,3 +108,9 @@ func (c *BaseCache) Unlock() {
 		c.mutex.Unlock()
 	}
 }
+
+func (c *BaseCache) Reset() {
+	c.Lock()
+	defer c.Unlock()
+	c.CdbManager.Reset(c.CleanFunc)
+}

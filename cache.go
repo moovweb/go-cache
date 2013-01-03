@@ -16,6 +16,7 @@ type Cache interface {
 	SetCleanFunc(CacheCleanFunc)
 	GetHitRate() int
 	GetUsage() int
+	Reset()
 }
 
 var CacheMiss = errors.New("miss")

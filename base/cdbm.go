@@ -9,6 +9,7 @@ type CdbManager interface {
 	Collect() map[string]CacheObject
 	Check()
 	GetUsage() int
+	Reset(CacheCleanFunc)
 }
 
 type BasicCdbm struct {
@@ -114,4 +115,10 @@ func (cdbm *BasicCdbm) Check() {
 
 func (cdbm *BasicCdbm) GetUsage() int {
 	return cdbm.Size
+}
+
+func (cdbm *BasicCdbm) Reset(f CacheCleanFunc) {
+	for key, _ := range(cdbm.Hash) {
+		cdbm.Remove(key, f)
+	}
 }

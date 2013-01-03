@@ -211,3 +211,9 @@ func (cdbm *ArcCdbm) Collect() map[string]CacheObject {
 	}
 	return m
 }
+
+func (cdbm *ArcCdbm) Reset(f CacheCleanFunc) {
+	for key, _ := range(cdbm.Hash) {
+		cdbm.Remove(key, f)
+	}
+}
