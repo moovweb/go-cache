@@ -127,7 +127,7 @@ func (cdbm *ArcCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (bas
 	
 	var cdb base.CacheDirectoryBlock
 	for avail := sizeLimit - cdbm.Size; objectSize > avail; avail = sizeLimit - cdbm.Size {
-		if cdbm.t1.size + cdbm.b1.size + objectSize >= cdbm.Size {
+		if cdbm.t1.size + cdbm.b1.size + objectSize >= sizeLimit {
 			if cdbm.b1.size > 0 {
 				cdb = cdbm.b1.RemoveLRU()
 				cdbm.evict(f)
@@ -140,8 +140,8 @@ func (cdbm *ArcCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (bas
 				}
 			}
 			delete(cdbm.Hash, cdb.GetKey())
-		} else if cdbm.t1.size + cdbm.t2.size + cdbm.b1.size + cdbm.b2.size + objectSize >= cdbm.Size {
-			if cdbm.t1.size + cdbm.t2.size + cdbm.b1.size + cdbm.b2.size + objectSize >= cdbm.Size * 2 {
+		} else if cdbm.t1.size + cdbm.t2.size + cdbm.b1.size + cdbm.b2.size + objectSize >= sizeLimit {
+			if cdbm.t1.size + cdbm.t2.size + cdbm.b1.size + cdbm.b2.size + objectSize >= sizeLimit * 2 {
 				cdb = cdbm.b2.RemoveLRU()
 				delete(cdbm.Hash, cdb.GetKey())
 			} else {
