@@ -3,7 +3,6 @@ package cache
 import "errors"
 
 type CacheObject interface {
-	Size() int
 }
 
 type CacheFetchFunc func(string) (CacheObject, error)
