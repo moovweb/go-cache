@@ -85,6 +85,12 @@ func (c *BaseCache) GetUsage() int {
 	return c.CdbManager.GetUsage()
 }
 
+func (c *BaseCache) GetUsageRate() int {
+	c.Lock()
+	defer c.Unlock()
+	return c.CdbManager.GetUsage() * 100 / c.size
+}
+
 func (c *BaseCache) Check() {
 	c.Lock()
 	defer c.Unlock()

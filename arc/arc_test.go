@@ -52,6 +52,7 @@ func TestGet(t *testing.T) {
 		}
 	}
 	println("cache hit rate:", c.GetHitRate())
+	println("cache usage rate:", c.GetUsageRate())
 	c.Reset()
 	if c.GetUsage() != 0 {
 		t.Errorf("after reset, cache usage should be zero")
