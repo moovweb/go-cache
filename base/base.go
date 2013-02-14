@@ -121,5 +121,5 @@ func (c *BaseCache) Reset() {
 }
 
 func (c *BaseCache) Delete(key string) error {
-	return nil
+	return c.CdbManager.Remove(key, c.CleanFunc)
 }
