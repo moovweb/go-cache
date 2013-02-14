@@ -60,7 +60,6 @@ func (c *BaseCache) Get(key string) (object CacheObject, err error) {
 	return cdb.GetObject(), nil
 }
 
-
 func (c *BaseCache) Set(key string, object CacheObject) error {
 	if len(key) == 0 {
 		return EmptyKey
@@ -76,7 +75,7 @@ func (c *BaseCache) GetHitRate() int {
 	if c.accesses <= 0 {
 		return 0
 	}
-	return int(c.hits*100/c.accesses)
+	return int(c.hits * 100 / c.accesses)
 }
 
 func (c *BaseCache) GetUsage() int {
@@ -119,4 +118,8 @@ func (c *BaseCache) Reset() {
 	c.Lock()
 	defer c.Unlock()
 	c.CdbManager.Reset(c.CleanFunc)
+}
+
+func (c *BaseCache) Delete(key string) error {
+	return nil
 }

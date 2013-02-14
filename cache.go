@@ -11,6 +11,7 @@ type CacheCleanFunc func(CacheObject) error
 type Cache interface {
 	Set(string, CacheObject) error
 	Get(string) (CacheObject, error)
+	Delete(string) error
 	Check()
 	Collect() map[string]CacheObject
 	SetCleanFunc(CacheCleanFunc)
