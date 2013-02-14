@@ -6,6 +6,7 @@ import "math/rand"
 type CdbManager interface {
 	Find(string) (CacheDirectoryBlock, error)
 	Replace(string, CacheObject, int, CacheCleanFunc) error
+	Remove(key string, f CacheCleanFunc) error
 	Collect() map[string]CacheObject
 	Check()
 	GetUsage() int
@@ -36,17 +37,17 @@ func (cdbm *BasicCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (C
 	if sizeLimit < objectSize {
 		return nil, ObjectTooBig
 	}
-	
+
 	//there is nothing 
 	if len(cdbm.Hash) == 0 {
 		return nil, nil
 	}
 
 	var repl CacheDirectoryBlock
-	
+
 	for avail := sizeLimit - cdbm.Size; objectSize > avail; avail = sizeLimit - cdbm.Size {
 		cdbs := make([]CacheDirectoryBlock, 0, len(cdbm.Hash))
-		for _, val := range(cdbm.Hash) {
+		for _, val := range cdbm.Hash {
 			cdbs = append(cdbs, val)
 		}
 		num := len(cdbs)
@@ -96,14 +97,14 @@ func (cdbm *BasicCdbm) Replace(key string, object CacheObject, sizeLimit int, f 
 
 func (cdbm *BasicCdbm) Collect() map[string]CacheObject {
 	m := make(map[string]CacheObject)
-	for key, cdb := range(cdbm.Hash) {
+	for key, cdb := range cdbm.Hash {
 		m[key] = cdb.GetObject()
 	}
 	return m
 }
 
 func (cdbm *BasicCdbm) Check() {
-	for key, cdb := range(cdbm.Hash) {
+	for key, cdb := range cdbm.Hash {
 		if cdb.GetKey() != key {
 			panic("keys don't match")
 		}
@@ -118,7 +119,7 @@ func (cdbm *BasicCdbm) GetUsage() int {
 }
 
 func (cdbm *BasicCdbm) Reset(f CacheCleanFunc) {
-	for key, _ := range(cdbm.Hash) {
+	for key, _ := range cdbm.Hash {
 		cdbm.Remove(key, f)
 	}
 }

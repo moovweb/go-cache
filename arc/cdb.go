@@ -1,9 +1,11 @@
 package arc
 
 import (
+	"container/list"
+	"errors"
+
 	. "go-cache"
 	"go-cache/base"
-	"container/list"
 )
 
 const (
@@ -16,20 +18,19 @@ const (
 
 type ArcCdbm struct {
 	*base.BasicCdbm
-	t1 *CdbList
-	b1 *CdbList
-	t2 *CdbList
-	b2 *CdbList
+	t1        *CdbList
+	b1        *CdbList
+	t2        *CdbList
+	b2        *CdbList
 	target_t1 int
 }
 
-
 type ArcCdb struct {
 	element *list.Element
-	where int
+	where   int
 	base.BaseCdb
 	size int
-	v string
+	v    string
 }
 
 func newCacheDirectorBlock() *ArcCdb {
@@ -65,7 +66,7 @@ func (cdbm *ArcCdbm) Find(key string) (base.CacheDirectoryBlock, error) {
 	return cdb, err
 }
 
-func (cdbm *ArcCdbm) Remove(key string, f CacheCleanFunc) int {
+func (cdbm *ArcCdbm) remove(key string, f CacheCleanFunc) int {
 	cdb, ok := cdbm.Hash[key]
 	if ok {
 		acdb := cdb.(*ArcCdb)
@@ -78,10 +79,10 @@ func (cdbm *ArcCdbm) Remove(key string, f CacheCleanFunc) int {
 			if f != nil {
 				f(object)
 			}
-		} else if  where == in_b1 {
-			cdbm.target_t1 = min(cdbm.target_t1 + max(cdbm.b2.size/cdbm.b1.size, 1), cdbm.Size)
+		} else if where == in_b1 {
+			cdbm.target_t1 = min(cdbm.target_t1+max(cdbm.b2.size/cdbm.b1.size, 1), cdbm.Size)
 			cdbm.b1.Remove(acdb.element)
-		} else  if where == in_t2 {
+		} else if where == in_t2 {
 			object := cdb.GetObject()
 			cdbm.t2.Remove(acdb.element)
 			cdbm.Size -= object.Size()
@@ -89,13 +90,21 @@ func (cdbm *ArcCdbm) Remove(key string, f CacheCleanFunc) int {
 				f(object)
 			}
 		} else if where == in_b2 {
-			cdbm.target_t1 = max(cdbm.target_t1 - max(cdbm.b1.size/cdbm.b2.size, 1), 0)
+			cdbm.target_t1 = max(cdbm.target_t1-max(cdbm.b1.size/cdbm.b2.size, 1), 0)
 			cdbm.b2.Remove(acdb.element)
 		}
 		delete(cdbm.Hash, key)
 		return where
 	}
 	return not_in
+}
+
+func (cbdm *ArcCdbm) Remove(key string, f CacheCleanFunc) error {
+	where := cbdm.remove(key, f)
+	if where == not_in {
+		return errors.New("Tried to remove slug that doesn't exist: " + key)
+	}
+	return nil
 }
 
 func (cdbm *ArcCdbm) evict(f CacheCleanFunc) {
@@ -124,10 +133,10 @@ func (cdbm *ArcCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (bas
 	if sizeLimit < objectSize {
 		return nil, ObjectTooBig
 	}
-	
+
 	var cdb base.CacheDirectoryBlock
 	for avail := sizeLimit - cdbm.Size; objectSize > avail; avail = sizeLimit - cdbm.Size {
-		if cdbm.t1.size + cdbm.b1.size + objectSize >= sizeLimit {
+		if cdbm.t1.size+cdbm.b1.size+objectSize >= sizeLimit {
 			if cdbm.b1.size > 0 {
 				cdb = cdbm.b1.RemoveLRU()
 				cdbm.evict(f)
@@ -140,8 +149,8 @@ func (cdbm *ArcCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (bas
 				}
 			}
 			delete(cdbm.Hash, cdb.GetKey())
-		} else if cdbm.t1.size + cdbm.t2.size + cdbm.b1.size + cdbm.b2.size + objectSize >= sizeLimit {
-			if cdbm.t1.size + cdbm.t2.size + cdbm.b1.size + cdbm.b2.size + objectSize >= sizeLimit * 2 {
+		} else if cdbm.t1.size+cdbm.t2.size+cdbm.b1.size+cdbm.b2.size+objectSize >= sizeLimit {
+			if cdbm.t1.size+cdbm.t2.size+cdbm.b1.size+cdbm.b2.size+objectSize >= sizeLimit*2 {
 				cdb = cdbm.b2.RemoveLRU()
 				delete(cdbm.Hash, cdb.GetKey())
 			} else {
@@ -159,13 +168,13 @@ func (cdbm *ArcCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (bas
 }
 
 func (cdbm *ArcCdbm) Replace(key string, object CacheObject, sizeLimit int, f CacheCleanFunc) error {
-	where := cdbm.Remove(key, f)
+	where := cdbm.remove(key, f)
 	oSize := object.Size()
 	cdb, err := cdbm.MakeSpace(oSize, sizeLimit, f)
 	if err != nil {
 		return err
 	}
-	
+
 	acdb := cdb.(*ArcCdb)
 	acdb.size = oSize
 	acdb.v = key
@@ -185,7 +194,7 @@ func (cdbm *ArcCdbm) Replace(key string, object CacheObject, sizeLimit int, f Ca
 }
 
 func (cdbm *ArcCdbm) Check() {
-	for key, cdb := range(cdbm.Hash) {
+	for key, cdb := range cdbm.Hash {
 		if cdb.GetKey() != key {
 			panic("keys don't match " + cdb.GetKey() + "!=" + key)
 		}
@@ -204,7 +213,7 @@ func (cdbm *ArcCdbm) Check() {
 
 func (cdbm *ArcCdbm) Collect() map[string]CacheObject {
 	m := make(map[string]CacheObject)
-	for key, cdb := range(cdbm.Hash) {
+	for key, cdb := range cdbm.Hash {
 		if cdb.(*ArcCdb).where == in_t1 || cdb.(*ArcCdb).where == in_t2 {
 			m[key] = cdb.GetObject()
 		}
@@ -213,7 +222,7 @@ func (cdbm *ArcCdbm) Collect() map[string]CacheObject {
 }
 
 func (cdbm *ArcCdbm) Reset(f CacheCleanFunc) {
-	for key, _ := range(cdbm.Hash) {
+	for key, _ := range cdbm.Hash {
 		cdbm.Remove(key, f)
 	}
 }
