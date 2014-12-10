@@ -2,8 +2,8 @@ package lru
 
 import (
 	"container/list"
-	. "go-cache"
-	"go-cache/base"
+	. "github.com/moovweb/go-cache"
+	"github.com/moovweb/go-cache/base"
 )
 
 type LruCdbm struct {
@@ -54,14 +54,14 @@ func (cdbm *LruCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (bas
 	if sizeLimit < objectSize {
 		return nil, ObjectTooBig
 	}
-	
-	//there is nothing 
+
+	//there is nothing
 	if len(cdbm.Hash) == 0 {
 		return nil, nil
 	}
 
 	var repl base.CacheDirectoryBlock
-	
+
 	for avail := sizeLimit - cdbm.Size; objectSize > avail; avail = sizeLimit - cdbm.Size {
 		lru := cdbm.cdbs.Front()
 		if lru == nil {
@@ -85,7 +85,7 @@ func (cdbm *LruCdbm) Replace(key string, object CacheObject, sizeLimit int, f Ca
 	if err != nil {
 		return err
 	}
-	
+
 	if cdb == nil {
 		cdb = newCacheDirectorBlock()
 	}
