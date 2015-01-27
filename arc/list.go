@@ -1,21 +1,20 @@
 package arc
 
 import "container/list"
+
 //import . "go-cache"
-import "go-cache/base"
+import "github.com/moovweb/go-cache/base"
 
 type CdbList struct {
-	l *list.List
+	l    *list.List
 	size int
 }
-
 
 func (cl *CdbList) PushBack(cdb base.CacheDirectoryBlock) *list.Element {
 	e := cl.l.PushBack(cdb)
 	cl.size += cdb.(*ArcCdb).size
 	return e
 }
-
 
 func (cl *CdbList) Remove(e *list.Element) base.CacheDirectoryBlock {
 	cdb := cl.l.Remove(e).(base.CacheDirectoryBlock)

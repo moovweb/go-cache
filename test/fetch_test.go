@@ -1,12 +1,13 @@
 package test
 
 import "testing"
-import "go-cache/arc"
+import "github.com/moovweb/go-cache/arc"
 import "go-cache/lru"
-import "go-cache/base"
+import "github.com/moovweb/go-cache/base"
 import "strings"
 import "io/ioutil"
 import "sync"
+
 //import "time"
 
 func TestArcFetch(t *testing.T) {
@@ -24,10 +25,10 @@ func TestArcFetch(t *testing.T) {
 	for j := 0; j < concurrency; j++ {
 		wg.Add(1)
 		go func() {
-			for i := 0; i < countAccess; i ++ {
+			for i := 0; i < countAccess; i++ {
 				_, err := c.Get(lines[i])
 				if err != nil {
-					c.Set(lines[i], &StringObject{s:lines[i]})
+					c.Set(lines[i], &StringObject{s: lines[i]})
 				}
 			}
 			wg.Done()
@@ -37,7 +38,7 @@ func TestArcFetch(t *testing.T) {
 
 	c.Check()
 
-	for key, obj := range(c.Collect()) {
+	for key, obj := range c.Collect() {
 		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
@@ -58,10 +59,10 @@ func TestLRUFetch(t *testing.T) {
 	for j := 0; j < concurrency; j++ {
 		wg.Add(1)
 		go func() {
-			for i := 0; i < countAccess; i ++ {
+			for i := 0; i < countAccess; i++ {
 				_, err := c.Get(lines[i])
 				if err != nil {
-					c.Set(lines[i], &StringObject{s:lines[i]})
+					c.Set(lines[i], &StringObject{s: lines[i]})
 				}
 			}
 			wg.Done()
@@ -71,7 +72,7 @@ func TestLRUFetch(t *testing.T) {
 
 	c.Check()
 
-	for key, obj := range(c.Collect()) {
+	for key, obj := range c.Collect() {
 		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
@@ -93,10 +94,10 @@ func TestRandomFetch(t *testing.T) {
 	for j := 0; j < concurrency; j++ {
 		wg.Add(1)
 		go func() {
-			for i := 0; i < countAccess; i ++ {
+			for i := 0; i < countAccess; i++ {
 				_, err := c.Get(lines[i])
 				if err != nil {
-					c.Set(lines[i], &StringObject{s:lines[i]})
+					c.Set(lines[i], &StringObject{s: lines[i]})
 				}
 			}
 			wg.Done()
@@ -106,7 +107,7 @@ func TestRandomFetch(t *testing.T) {
 
 	c.Check()
 
-	for key, obj := range(c.Collect()) {
+	for key, obj := range c.Collect() {
 		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}

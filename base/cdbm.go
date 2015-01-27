@@ -1,6 +1,6 @@
 package base
 
-import . "go-cache"
+import . "github.com/moovweb/go-cache"
 import "math/rand"
 
 type CdbManager interface {
@@ -38,7 +38,7 @@ func (cdbm *BasicCdbm) MakeSpace(objectSize, sizeLimit int, f CacheCleanFunc) (C
 		return nil, ObjectTooBig
 	}
 
-	//there is nothing 
+	//there is nothing
 	if len(cdbm.Hash) == 0 {
 		return nil, nil
 	}

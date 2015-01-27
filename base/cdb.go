@@ -1,6 +1,6 @@
 package base
 
-import . "go-cache"
+import . "github.com/moovweb/go-cache"
 
 type CacheDirectoryBlock interface {
 	GetKey() string
@@ -11,7 +11,7 @@ type CacheDirectoryBlock interface {
 
 type BaseCdb struct {
 	object CacheObject
-	key string
+	key    string
 }
 
 func (cdb *BaseCdb) GetKey() string {
