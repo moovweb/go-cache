@@ -1,7 +1,7 @@
 package lru
 
 import (
-	"github.com/moovweb/container/list"
+	"container/list"
 	. "github.com/moovweb/go-cache"
 	"github.com/moovweb/go-cache/base"
 )

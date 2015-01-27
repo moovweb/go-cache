@@ -2,7 +2,7 @@ package test
 
 import "testing"
 import "github.com/moovweb/go-cache/arc"
-import "go-cache/lru"
+import "github.com/moovweb/go-cache/lru"
 import "github.com/moovweb/go-cache/base"
 import "strings"
 import "io/ioutil"
