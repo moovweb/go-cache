@@ -1,10 +1,10 @@
 package test
 
 import "testing"
-import "go-cache"
-import "go-cache/arc"
-import "go-cache/lru"
-import "go-cache/base"
+import "github.com/moovweb/go-cache"
+import "github.com/moovweb/go-cache/arc"
+import "github.com/moovweb/go-cache/lru"
+import "github.com/moovweb/go-cache/base"
 import "strings"
 import "io/ioutil"
 import "sync"
@@ -20,7 +20,6 @@ func (o *StringObject) Size() int {
 const cacheSize = 20 * 40
 const concurrency = 20
 
-
 func TestARC(t *testing.T) {
 	countCleaned := 0
 	countAdded := 0
@@ -34,7 +33,7 @@ func TestARC(t *testing.T) {
 	str := string(data)
 	lines := strings.Split(str, "\n")
 
-	c.SetCleanFunc(func (obj cache.CacheObject) error {
+	c.SetCleanFunc(func(obj cache.CacheObject) error {
 		countCleaned += obj.Size()
 		return nil
 	})
@@ -44,7 +43,7 @@ func TestARC(t *testing.T) {
 	for j := 0; j < concurrency; j++ {
 		wg.Add(1)
 		go func() {
-			for i := 0; i < countAccess; i ++ {
+			for i := 0; i < countAccess; i++ {
 				val, err := c.Get(lines[i])
 				if err == cache.CacheMiss {
 					countAdded += len(lines[i])
@@ -61,11 +60,11 @@ func TestARC(t *testing.T) {
 
 	c.Check()
 
-	if countCleaned + c.GetUsage() != countAdded {
+	if countCleaned+c.GetUsage() != countAdded {
 		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, c.GetUsage())
 	}
-	
-	for key, obj := range(c.Collect()) {
+
+	for key, obj := range c.Collect() {
 		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
@@ -86,7 +85,7 @@ func TestLRU(t *testing.T) {
 	str := string(data)
 	lines := strings.Split(str, "\n")
 
-	c.SetCleanFunc(func (obj cache.CacheObject) error {
+	c.SetCleanFunc(func(obj cache.CacheObject) error {
 		countCleaned += obj.Size()
 		return nil
 	})
@@ -96,7 +95,7 @@ func TestLRU(t *testing.T) {
 	for j := 0; j < concurrency; j++ {
 		wg.Add(1)
 		go func() {
-			for i := 0; i < countAccess; i ++ {
+			for i := 0; i < countAccess; i++ {
 				val, err := c.Get(lines[i])
 				if err == cache.CacheMiss {
 					countAdded += len(lines[i])
@@ -113,11 +112,11 @@ func TestLRU(t *testing.T) {
 
 	c.Check()
 
-	if countCleaned + c.GetUsage() != countAdded {
+	if countCleaned+c.GetUsage() != countAdded {
 		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, c.GetUsage())
 	}
-	
-	for key, obj := range(c.Collect()) {
+
+	for key, obj := range c.Collect() {
 		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}
@@ -138,7 +137,7 @@ func TestRandom(t *testing.T) {
 	str := string(data)
 	lines := strings.Split(str, "\n")
 
-	c.SetCleanFunc(func (obj cache.CacheObject) error {
+	c.SetCleanFunc(func(obj cache.CacheObject) error {
 		countCleaned += obj.Size()
 		return nil
 	})
@@ -148,7 +147,7 @@ func TestRandom(t *testing.T) {
 	for j := 0; j < concurrency; j++ {
 		wg.Add(1)
 		go func() {
-			for i := 0; i < countAccess; i ++ {
+			for i := 0; i < countAccess; i++ {
 				val, err := c.Get(lines[i])
 				if err == cache.CacheMiss {
 					countAdded += len(lines[i])
@@ -165,11 +164,11 @@ func TestRandom(t *testing.T) {
 
 	c.Check()
 
-	if countCleaned + c.GetUsage() != countAdded {
+	if countCleaned+c.GetUsage() != countAdded {
 		t.Errorf("numbers of data items dont match: %d != %d + %d\n", countAdded, countCleaned, c.GetUsage())
 	}
-	
-	for key, obj := range(c.Collect()) {
+
+	for key, obj := range c.Collect() {
 		if key != obj.(*StringObject).s {
 			t.Errorf("key does not match the cached value")
 		}

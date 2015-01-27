@@ -1,6 +1,6 @@
 package base
 
-import . "go-cache"
+import . "github.com/moovweb/go-cache"
 import "sync"
 
 type BaseCache struct {
